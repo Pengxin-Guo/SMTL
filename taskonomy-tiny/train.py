@@ -5,7 +5,7 @@ import torch.optim as optim
 import numpy as np
 import scipy.io as sio
 from backbone import DeepLabv3, Cross_Stitch, MTANDeepLabv3, AdaShare, AMTLmodel, AMTLmodel_new
-# from nddr_cnn import NDDRCNN
+from nddr_cnn import NDDRCNN
 from tqdm import tqdm
 
 from create_dataset_taskonomy import Taskonomy, data_prefetcher
@@ -35,36 +35,10 @@ print(params)
 
 
 dataset_path = '/data/baijiongl/taskonomy-tiny/'
-
 tasks = ['seg', 'depth', 'sn', 'keypoint', 'edge']
 if params.task_index < len(tasks):
     tasks = [tasks[params.task_index]] 
-
-if params.model == 'DMTL':
-    batch_size = 200
-    model = DeepLabv3(tasks=tasks).cuda()
-elif params.model == 'MTAN':
-    batch_size = 135
-    model = MTANDeepLabv3(tasks=tasks).cuda()
-elif params.model == 'CROSS':
-    batch_size = 100
-    model = Cross_Stitch(tasks=tasks).cuda()
-elif params.model == 'AdaShare':
-    batch_size = 100
-    model = AdaShare(tasks=tasks).cuda()
-elif params.model == 'NDDRCNN':
-    batch_size = 100
-    model = NDDRCNN(tasks=tasks).cuda()
-elif params.model == 'AMTL':
-    batch_size = 100
-    model = AMTLmodel(tasks=tasks, version=params.version).cuda()
-elif params.model == 'AMTL_new':
-    batch_size = 100
-    model = AMTLmodel_new(tasks=tasks, version=params.version).cuda()
-else:
-    print("No correct model parameter!")
-    exit()
-    
+   
 taskonomy_train_set = Taskonomy(dataroot=dataset_path, mode='train', augmentation=params.aug)
 taskonomy_test_set = Taskonomy(dataroot=dataset_path, mode='test', augmentation=False)
 
@@ -100,6 +74,31 @@ train_prefetcher = data_prefetcher(taskonomy_train_loader)
 test_prefetcher = data_prefetcher(taskonomy_test_loader)
 
 # DistributedDataParallel
+if params.model == 'DMTL':
+    batch_size = 200
+    model = DeepLabv3(tasks=tasks).cuda()
+elif params.model == 'MTAN':
+    batch_size = 135
+    model = MTANDeepLabv3(tasks=tasks).cuda()
+elif params.model == 'CROSS':
+    batch_size = 100
+    model = Cross_Stitch(tasks=tasks).cuda()
+elif params.model == 'AdaShare':
+    batch_size = 100
+    model = AdaShare(tasks=tasks).cuda()
+elif params.model == 'NDDRCNN':
+    batch_size = 100
+    model = NDDRCNN(tasks=tasks).cuda()
+elif params.model == 'AMTL':
+    batch_size = 100
+    model = AMTLmodel(tasks=tasks, version=params.version).cuda()
+elif params.model == 'AMTL_new':
+    batch_size = 100
+    model = AMTLmodel_new(tasks=tasks, version=params.version).cuda()
+else:
+    print("No correct model parameter!")
+    exit()
+    
 model.cuda()
 model = nn.parallel.DistributedDataParallel(model, device_ids=[params.local_rank])
 
