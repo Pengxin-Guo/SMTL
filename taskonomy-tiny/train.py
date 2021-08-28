@@ -117,8 +117,8 @@ for epoch in range(total_epoch):
     performance_meter = PerformanceMeter(tasks, dataset_path)
     # for batch_index in tqdm(range(train_batch)):
     for batch_index in range(train_batch):
-        if batch_index > 1:
-            break
+        # if batch_index > 1:
+        #     break
         
         train_data, train_gt_dict = train_prefetcher.next()
         train_data = train_data.cuda()
@@ -143,8 +143,8 @@ for epoch in range(total_epoch):
         val_batch = len(taskonomy_test_loader)
         performance_meter = PerformanceMeter(tasks, dataset_path)
         for k in range(val_batch):
-            if k > 1:
-                break
+            # if k > 1:
+            #     break
             
             val_data, val_gt_dict = test_prefetcher.next()
             val_data = val_data.cuda()
