@@ -34,7 +34,7 @@ params = parse_args()
 print(params)
 
 
-dataset_path = '/data/baijiongl/taskonomy-tiny/'
+dataset_path = '/raid/zy_lab/gpx/dataset/taskonomy-tiny/'
 tasks = ['seg', 'depth', 'sn', 'keypoint', 'edge']
 if params.task_index < len(tasks):
     tasks = [tasks[params.task_index]] 
@@ -51,6 +51,30 @@ torch.distributed.init_process_group(backend='nccl')
 torch.cuda.set_device(params.local_rank)
 train_sampler = torch.utils.data.distributed.DistributedSampler(taskonomy_train_set)
 
+if params.model == 'DMTL':
+    batch_size = 230
+    model = DeepLabv3(tasks=tasks).cuda()
+elif params.model == 'MTAN':
+    batch_size = 120
+    model = MTANDeepLabv3(tasks=tasks).cuda()
+elif params.model == 'CROSS':
+    batch_size = 130
+    model = Cross_Stitch(tasks=tasks).cuda()
+elif params.model == 'AdaShare':
+    batch_size = 180
+    model = AdaShare(tasks=tasks).cuda()
+elif params.model == 'NDDRCNN':
+    batch_size = 100
+    model = NDDRCNN(tasks=tasks).cuda()
+elif params.model == 'AMTL':
+    batch_size = 100
+    model = AMTLmodel(tasks=tasks, version=params.version).cuda()
+elif params.model == 'AMTL_new':
+    batch_size = 90
+    model = AMTLmodel_new(tasks=tasks, version=params.version).cuda()
+else:
+    print("No correct model parameter!")
+    exit()
 
 taskonomy_test_loader = torch.utils.data.DataLoader(
     dataset=taskonomy_test_set,
@@ -58,7 +82,6 @@ taskonomy_test_loader = torch.utils.data.DataLoader(
     shuffle=False,
     num_workers=4,
     pin_memory=True)
-
 
 taskonomy_train_loader = torch.utils.data.DataLoader(
     dataset=taskonomy_train_set,
@@ -73,32 +96,7 @@ taskonomy_train_loader = torch.utils.data.DataLoader(
 train_prefetcher = data_prefetcher(taskonomy_train_loader)
 test_prefetcher = data_prefetcher(taskonomy_test_loader)
 
-# DistributedDataParallel
-if params.model == 'DMTL':
-    batch_size = 200
-    model = DeepLabv3(tasks=tasks).cuda()
-elif params.model == 'MTAN':
-    batch_size = 135
-    model = MTANDeepLabv3(tasks=tasks).cuda()
-elif params.model == 'CROSS':
-    batch_size = 100
-    model = Cross_Stitch(tasks=tasks).cuda()
-elif params.model == 'AdaShare':
-    batch_size = 100
-    model = AdaShare(tasks=tasks).cuda()
-elif params.model == 'NDDRCNN':
-    batch_size = 100
-    model = NDDRCNN(tasks=tasks).cuda()
-elif params.model == 'AMTL':
-    batch_size = 100
-    model = AMTLmodel(tasks=tasks, version=params.version).cuda()
-elif params.model == 'AMTL_new':
-    batch_size = 100
-    model = AMTLmodel_new(tasks=tasks, version=params.version).cuda()
-else:
-    print("No correct model parameter!")
-    exit()
-    
+# DistributedDataParallel    
 model.cuda()
 model = nn.parallel.DistributedDataParallel(model, device_ids=[params.local_rank])
 
@@ -119,7 +117,7 @@ for epoch in range(total_epoch):
     performance_meter = PerformanceMeter(tasks, dataset_path)
     # for batch_index in tqdm(range(train_batch)):
     for batch_index in range(train_batch):
-        if batch_index > 2:
+        if batch_index > 1:
             break
         
         train_data, train_gt_dict = train_prefetcher.next()
@@ -145,19 +143,19 @@ for epoch in range(total_epoch):
         val_batch = len(taskonomy_test_loader)
         performance_meter = PerformanceMeter(tasks, dataset_path)
         for k in range(val_batch):
-            if k > 2:
+            if k > 1:
                 break
             
             val_data, val_gt_dict = test_prefetcher.next()
             val_data = val_data.cuda()
             # val_gt_dict = val_gt_dict.cuda()
 
-            val_pred = model.predict(val_data)
+            val_pred = model.module.predict(val_data)
             performance_meter.update(val_pred, val_gt_dict)
         eval_results_val = performance_meter.get_score()
         if torch.distributed.get_rank() == 0:
             if params.model == 'AMTL' or params.model == 'AMTL_new':
-                alpha = model.get_adaptative_parameter()
+                alpha = model.module.get_adaptative_parameter()
                 for i in range(len(tasks)):
                     if params.version == 'v1':
                         print(alpha[i], F.softmax(alpha[i], 0))   # AMTL-v1, alpha_1 + alpha_2 = 1

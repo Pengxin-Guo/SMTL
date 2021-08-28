@@ -31,6 +31,9 @@ class DeepLabv3(nn.Module):
                                    img_size, mode='bilinear', align_corners=True)
         return out
         
+    def predict(self, x):
+        return self.forward(x)
+        
 
 class Cross_Stitch(nn.Module):
     def __init__(self, tasks, dataset='PASCAL'):
@@ -216,6 +219,9 @@ class MTANDeepLabv3(nn.Module):
         downsample = nn.Sequential(conv1x1(in_channel, 4 * out_channel, stride=1),
                                    nn.BatchNorm2d(4 * out_channel))
         return Bottleneck(in_channel, out_channel, downsample=downsample)
+    
+    def predict(self, x):
+        return self.forward(x)
         
     
 class AdaShare(nn.Module):

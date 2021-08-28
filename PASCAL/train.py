@@ -165,7 +165,7 @@ for epoch in range(total_epoch):
             val_data = val_batch_data['image'].cuda(non_blocking=True)
             targets = {task: val_batch_data[task].cuda(non_blocking=True) for task in tasks}
 
-            val_pred = model(val_data)
+            val_pred = model.predict(val_data)
             for tk, task in enumerate(tasks):
                 avg_cost[epoch, task_num+tk] += (criterion[task](val_pred[task], targets[task])).item()
             performance_meter.update({t: get_output(val_pred[t], t) for t in tasks}, 
