@@ -152,7 +152,7 @@ for epoch in range(total_epoch):
             val_data = val_data.cuda()
             # val_gt_dict = val_gt_dict.cuda()
 
-            val_pred = model(val_data)
+            val_pred = model.predict(val_data)
             performance_meter.update(val_pred, val_gt_dict)
         eval_results_val = performance_meter.get_score()
         if torch.distributed.get_rank() == 0:

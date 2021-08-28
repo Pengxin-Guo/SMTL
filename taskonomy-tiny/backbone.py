@@ -32,6 +32,9 @@ class DeepLabv3(nn.Module):
         for i, t in enumerate(self.tasks):
             out[t] = F.interpolate(self.decoders[i](x), img_size)
         return out
+    
+    def predict(self, x):
+        return self.forward(x)
         
 
 class Cross_Stitch(nn.Module):
@@ -95,7 +98,8 @@ class Cross_Stitch(nn.Module):
                     cross_stitch = self.cross_unit[i - 1][0] * res_feature[0][i - 1] + \
                                    self.cross_unit[i - 1][1] * res_feature[1][i - 1] + \
                                    self.cross_unit[i - 1][2] * res_feature[2][i - 1] + \
-                                   self.cross_unit[i - 1][3] * res_feature[3][i - 1]
+                                   self.cross_unit[i - 1][3] * res_feature[3][i - 1] + \
+                                   self.cross_unit[i - 1][4] * res_feature[4][i - 1]
                     res_feature[j][i] = res_layer[j](cross_stitch)
         
         # Task specific decoders
@@ -217,6 +221,9 @@ class MTANDeepLabv3(nn.Module):
         downsample = nn.Sequential(conv1x1(in_channel, 4 * out_channel, stride=1),
                                    nn.BatchNorm2d(4 * out_channel))
         return Bottleneck(in_channel, out_channel, downsample=downsample)
+    
+    def predict(self, x):
+        return self.forward(x)
         
     
 class AdaShare(nn.Module):
