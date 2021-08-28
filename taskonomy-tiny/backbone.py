@@ -35,7 +35,7 @@ class DeepLabv3(nn.Module):
         
 
 class Cross_Stitch(nn.Module):
-    def __init__(self, tasks, dataset='PASCAL'):
+    def __init__(self, tasks, dataset='Taskonomy'):
         super(Cross_Stitch, self).__init__()
         if dataset == 'Taskonomy':
              self.class_nb = 17
@@ -77,7 +77,7 @@ class Cross_Stitch(nn.Module):
         # ResNet blocks with cross-stitch
         res_feature = [0, 0, 0, 0]
         for j in range(self.task_num):
-            res_feature[j] = [0, 0, 0, 0]
+            res_feature[j] = [0, 0, 0, 0, 0]
                
         for i in range(4):
             if i == 0:
