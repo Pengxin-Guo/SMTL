@@ -109,6 +109,7 @@ total_epoch = params.total_epoch
 train_batch = len(taskonomy_train_loader)
 
 for epoch in range(total_epoch):
+    print('-'*10, epoch)
     s_t = time.time()
     train_sampler.set_epoch(epoch) # for DistributedDataParallel
 
