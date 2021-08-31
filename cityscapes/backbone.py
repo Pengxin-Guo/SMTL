@@ -304,6 +304,7 @@ class AdaShare(nn.Module):
 
         # define task-specific policy parameters
         self.alpha = nn.Parameter(torch.FloatTensor(4, len(self.tasks)))
+        self.alpha.data.fill_(0)
         
         self.down_sampling = nn.MaxPool2d(kernel_size=2, stride=2)
 
