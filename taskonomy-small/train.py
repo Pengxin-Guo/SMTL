@@ -1,5 +1,4 @@
 import torch, time, os, random
-os.environ["CUDA_VISIBLE_DEVICES"] = '1'
 import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
@@ -25,6 +24,7 @@ def parse_args():
     parser.add_argument('--model', default='DMTL', type=str, help='DMTL, CROSS, MTAN, AdaShare, NDDRCNN, AMTL, AMTL_new')
     parser.add_argument('--aug', action='store_true', default=False, help='data augmentation')
     parser.add_argument('--task_index', default=10, type=int, help='for STL: 0,1,2,3,4')
+    parser.add_argument('--gpu_id', default='0', help='gpu_id') 
     parser.add_argument('--total_epoch', default=200, type=int, help='training epoch')
     # for AMTL
     parser.add_argument('--version', default='v1', type=str, help='v1 (a1+a2=1), v2 (0<=a<=1), v3 (gumbel softmax)')
@@ -32,6 +32,8 @@ def parse_args():
 
 params = parse_args()
 print(params)
+
+os.environ["CUDA_VISIBLE_DEVICES"] = params.gpu_id
 
 dataset_path = '/data/baijiongl/taskonomy-tiny/'
 tasks = ['seg', 'depth', 'sn', 'keypoint', 'edge']

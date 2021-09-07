@@ -7,8 +7,6 @@ from model.resnet_dilated import ResnetDilated
 from model.aspp import DeepLabHead
 from model.resnet import Bottleneck, conv1x1
 
-from torch.cuda.amp import autocast
-
 
 class DeepLabv3(nn.Module):
     def __init__(self, tasks, dataset='Taskonomy'):
@@ -24,7 +22,6 @@ class DeepLabv3(nn.Module):
         self.backbone = ResnetDilated(resnet.__dict__['resnet18'](pretrained=True))
         self.decoders = nn.ModuleList([DeepLabHead(512, self.num_out_channels[t]) for t in self.tasks])
     
-    @autocast()
     def forward(self, x):
         img_size  = x.size()[-2:]
         x = self.backbone(x)
