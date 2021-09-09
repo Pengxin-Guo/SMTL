@@ -75,9 +75,9 @@ class Cross_Stitch(nn.Module):
         x = self.shared_conv(x)
         
         # ResNet blocks with cross-stitch
-        res_feature = [0, 0, 0, 0]
+        res_feature = [0, 0, 0, 0, 0]
         for j in range(self.task_num):
-            res_feature[j] = [0, 0, 0, 0, 0]
+            res_feature[j] = [0, 0, 0, 0]
                
         for i in range(4):
             if i == 0:
@@ -276,7 +276,7 @@ class AdaShare(nn.Module):
         x = self.shared_conv(x)
         
         # ResNet blocks with task-specific policy
-        res_feature = [0, 0, 0, 0]
+        res_feature = [0, 0, 0, 0, 0]
         for j in range(self.task_num):
             res_feature[j] = [0, 0, 0, 0]
                
@@ -316,7 +316,7 @@ class AdaShare(nn.Module):
         x = self.shared_conv(x)
         
         # ResNet blocks with task-specific policy
-        res_feature = [0, 0, 0, 0]
+        res_feature = [0, 0, 0, 0, 0]
         for j in range(self.task_num):
             res_feature[j] = [0, 0, 0, 0]
                
