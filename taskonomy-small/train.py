@@ -86,7 +86,6 @@ taskonomy_train_loader = torch.utils.data.DataLoader(
     pin_memory=True,
     drop_last=True)
 
-
 train_prefetcher = data_prefetcher(taskonomy_train_loader)
 test_prefetcher = data_prefetcher(taskonomy_test_loader)
 
