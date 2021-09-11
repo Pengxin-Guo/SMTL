@@ -223,3 +223,110 @@ class AMTL(nn.Module):
         
     def get_adaptative_parameter(self):
         return self.alpha
+        
+
+class AMTL_new(nn.Module):
+    def __init__(self, task_num, base_net='resnet50', hidden_dim=1024, class_num=31, version='v1'):
+        super(AMTL_new, self).__init__()
+        # shared base network
+        self.base_network_s = resnet.__dict__[base_net](pretrained=True)
+        # task-specific base network
+        self.base_network_t = nn.ModuleList([resnet.__dict__[base_net](pretrained=True) for _ in range(task_num)])
+        self.avgpool = self.base_network_s.avgpool
+        # shared hidden layer
+        self.hidden_layer_list_s = [nn.Linear(2048, hidden_dim),nn.BatchNorm1d(hidden_dim), nn.ReLU(), nn.Dropout(0.5)]
+        self.hidden_layer_s = nn.Sequential(*self.hidden_layer_list_s)
+        # task-specific hidden layer
+        self.hidden_layer_list_t = [nn.ModuleList([nn.Linear(2048, hidden_dim),nn.BatchNorm1d(hidden_dim), nn.ReLU(), nn.Dropout(0.5)]) for _ in range(task_num)]
+        self.hidden_layer_t = nn.ModuleList([nn.Sequential(*self.hidden_layer_list_t[t]) for t in range(task_num)])
+        # shared classifier layer
+        self.classifier_parameter_s = nn.Parameter(torch.FloatTensor(task_num, hidden_dim, class_num))
+        # task-specific classifier layer
+        self.classifier_parameter_t = nn.Parameter(torch.FloatTensor(task_num, hidden_dim, class_num))
+        
+        # initialization
+        self.hidden_layer_s[0].weight.data.normal_(0, 0.005)
+        self.hidden_layer_s[0].bias.data.fill_(0.1)
+        self.classifier_parameter_s.data.normal_(0, 0.01)
+        self.classifier_parameter_t.data.normal_(0, 0.01)
+        for t in range(task_num):
+            self.hidden_layer_t[t][0].weight.data.normal_(0, 0.005)
+            self.hidden_layer_t[t][0].bias.data.fill_(0.1)
+        
+        self.version = version
+        
+        # adaptative parameters
+        if self.version == 'v1' or self.version =='v2':
+            # AMTL-v1 and v2
+            self.alpha = nn.Parameter(torch.FloatTensor(task_num, 2))
+            self.alpha.data.fill_(0.5)   # init 0.5(shared) 0.5(specific)
+            # self.alpha.data[:,0].fill_(0)  # shared
+            # self.alpha.data[:,1].fill_(1)  # specific
+        elif self.version == 'v3':
+            # AMTL-v3, gumbel softmax
+            self.alpha = nn.Parameter(torch.FloatTensor(task_num))
+            self.alpha.data.fill_(0)
+        else:
+            print("No correct version parameter!")
+            exit()
+
+    def forward(self, inputs, task_index):
+        features_s = self.base_network_s(inputs)
+        features_s = torch.flatten(self.avgpool(features_s), 1)
+        hidden_features_s = self.hidden_layer_s(features_s)
+        outputs_s = torch.mm(hidden_features_s, self.classifier_parameter_s[task_index])
+        
+        features_t = self.base_network_t[task_index](inputs)
+        features_t = torch.flatten(self.avgpool(features_t), 1)
+        hidden_features_t = self.hidden_layer_t[task_index](features_t)
+        outputs_t = torch.mm(hidden_features_t, self.classifier_parameter_t[task_index])
+        
+        if self.version == 'v1':
+            temp_alpha = F.softmax(self.alpha[task_index], 0)     # AMTL-v1,  alpha_1 + alpha_2 = 1
+        elif self.version == 'v2':
+            temp_alpha = torch.exp(self.alpha[task_index]) / (1 + torch.exp(self.alpha[task_index])) # AMTL-v2,  0 <= alpha <=1
+        elif self.version == 'v3':
+            # below for AMTL-v3, gumbel softmax
+            temp = torch.sigmoid(self.alpha[task_index])
+            temp_alpha = torch.stack([1-temp, temp])
+            temp_alpha = F.gumbel_softmax(torch.log(temp_alpha), tau=0.1, hard=True)
+        else:
+            print("No correct version parameter!")
+            exit()
+
+        outputs = temp_alpha[0] * outputs_s + temp_alpha[1] * outputs_t
+        
+        return outputs
+    
+    def predict(self, inputs, task_index):
+        features_s = self.base_network_s(inputs)
+        features_s = torch.flatten(self.avgpool(features_s), 1)
+        hidden_features_s = self.hidden_layer_s(features_s)
+        outputs_s = torch.mm(hidden_features_s, self.classifier_parameter_s[task_index])
+        
+        features_t = self.base_network_t[task_index](inputs)
+        features_t = torch.flatten(self.avgpool(features_t), 1)
+        hidden_features_t = self.hidden_layer_t[task_index](features_t)
+        outputs_t = torch.mm(hidden_features_t, self.classifier_parameter_t[task_index])
+        
+        if self.version == 'v1':
+            temp_alpha = F.softmax(self.alpha[task_index], 0)     # AMTL-v1,  alpha_1 + alpha_2 = 1
+        elif self.version == 'v2':
+            temp_alpha = torch.exp(self.alpha[task_index]) / (1 + torch.exp(self.alpha[task_index])) # AMTL-v2,  0 <= alpha <=1
+        elif self.version == 'v3':
+            # below for AMTL-v3, gumbel softmax
+            temp = torch.sigmoid(self.alpha[task_index])
+            if temp >= 0.5:
+                temp_alpha = [0, 1]
+            else:
+                temp_alpha = [1, 0]
+        else:
+            print("No correct version parameter!")
+            exit()
+
+        outputs = temp_alpha[0] * outputs_s + temp_alpha[1] * outputs_t
+        
+        return outputs
+        
+    def get_adaptative_parameter(self):
+        return self.alpha

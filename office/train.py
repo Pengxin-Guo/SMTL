@@ -3,7 +3,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
 import numpy as np
-from backbone import MTAN_ResNet, DMTL, AMTL
+from backbone import MTAN_ResNet, DMTL, AMTL, AMTL_new
 from create_dataset import office_dataloader
 import argparse
 torch.set_num_threads(3)
@@ -17,7 +17,7 @@ def parse_args():
     parser.add_argument('--dataset', default='office-31', type=str, help='office-31, office-home')
     parser.add_argument('--task_index', default=10, type=int, help='for STL: 0,1,2,3')
     parser.add_argument('--gpu_id', default='0', help='gpu_id') 
-    parser.add_argument('--model', default='DMTL', type=str, help='DMTL, MTAN, AMTL')
+    parser.add_argument('--model', default='DMTL', type=str, help='DMTL, MTAN, AMTL, AMTL_new')
     parser.add_argument('--train_mode', default='trval', type=str, help='trval, train')
     # for AMTL
     parser.add_argument('--version', default='v1', type=str, help='v1 (a1+a2=1), v2 (0<=a<=1), v3 (gumbel softmax)')
@@ -45,6 +45,9 @@ elif params.model == 'MTAN':
 elif params.model == 'AMTL':
     batchsize = 32
     model = AMTL(task_num=task_num, class_num=class_num, version=params.version).cuda()
+elif params.model == 'AMTL_new':
+    batchsize = 32
+    model = AMTL_new(task_num=task_num, class_num=class_num, version=params.version).cuda()
 else:
     print("No correct model parameter!")
     exit()
@@ -53,7 +56,7 @@ data_loader, iter_data_loader = office_dataloader(params.dataset, batchsize=batc
 
 optimizer = optim.Adam(model.parameters(), lr=1e-4, weight_decay=1e-5)
 
-total_epoch = 50
+total_epoch = 100
 train_batch = max(len(data_loader[i][params.train_mode]) for i in range(task_num))
 avg_cost = torch.zeros([total_epoch, task_num])
 lambda_weight = torch.ones([task_num, total_epoch]).cuda()
@@ -64,7 +67,6 @@ for epoch in range(total_epoch):
     s_t = time.time()
     model.train()
     for batch_index in range(train_batch):
-        if batch_index > 1: break
         loss_train = torch.zeros(task_num).cuda()
         for task_index in range(task_num):
             try:
