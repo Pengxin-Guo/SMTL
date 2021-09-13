@@ -6,6 +6,7 @@ import numpy as np
 import scipy.io as sio
 from backbone import DeepLabv3, Cross_Stitch, MTANDeepLabv3, AdaShare, AMTLmodel, AMTLmodel_new
 from nddr_cnn import NDDRCNN
+from afa import AFANet
 from utils import *
 
 from create_dataset import  CityScape
@@ -19,7 +20,7 @@ np.random.seed(0)
 def parse_args():
     parser = argparse.ArgumentParser(description= 'AMTL on CityScapes')
     parser.add_argument('--gpu_id', default='0', help='gpu_id') 
-    parser.add_argument('--model', default='DMTL', type=str, help='DMTL, CROSS, MTAN, AdaShare, NDDRCNN, AMTL, AMTL_new')
+    parser.add_argument('--model', default='DMTL', type=str, help='DMTL, CROSS, MTAN, AdaShare, NDDRCNN, AFA, AMTL, AMTL_new')
     parser.add_argument('--aug', type=str, default='False', help='data augmentation')
     parser.add_argument('--train_mode', default='trainval', type=str, help='trainval, train')
     parser.add_argument('--total_epoch', default=200, type=int, help='training epoch')
@@ -49,6 +50,9 @@ elif params.model == 'AdaShare':
 elif params.model == 'NDDRCNN':
     batch_size = 80
     model = NDDRCNN().cuda()
+elif params.model == 'AFA':
+    batch_size = 2
+    model = AFANet().cuda()
 elif params.model == 'AMTL':
     batch_size = 70
     model = AMTLmodel(version=params.version).cuda()
