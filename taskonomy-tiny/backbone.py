@@ -2,10 +2,10 @@ import torch, sys
 import torch.nn as nn
 import torch.nn.functional as F
 
-from model import resnet
-from model.resnet_dilated import ResnetDilated
-from model.aspp import DeepLabHead
-from model.resnet import Bottleneck, conv1x1
+import resnet
+from resnet_dilated import ResnetDilated
+from aspp import DeepLabHead
+from resnet import Bottleneck, conv1x1
 
 
 class DeepLabv3(nn.Module):
