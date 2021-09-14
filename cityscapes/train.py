@@ -51,7 +51,7 @@ elif params.model == 'NDDRCNN':
     batch_size = 80
     model = NDDRCNN().cuda()
 elif params.model == 'AFA':
-    batch_size = 2
+    batch_size = 150
     model = AFANet().cuda()
 elif params.model == 'AMTL':
     batch_size = 70
