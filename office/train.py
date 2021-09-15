@@ -56,7 +56,7 @@ data_loader, iter_data_loader = office_dataloader(params.dataset, batchsize=batc
 
 optimizer = optim.Adam(model.parameters(), lr=1e-4, weight_decay=1e-5)
 
-total_epoch = 100
+total_epoch = 50
 train_batch = max(len(data_loader[i][params.train_mode]) for i in range(task_num))
 avg_cost = torch.zeros([total_epoch, task_num])
 lambda_weight = torch.ones([task_num, total_epoch]).cuda()
