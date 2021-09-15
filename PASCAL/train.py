@@ -12,7 +12,7 @@ from evaluation.evaluate_utils import PerformanceMeter, get_output
 
 from backbone import DeepLabv3, Cross_Stitch, MTANDeepLabv3, AdaShare, AMTLmodel, AMTLmodel_new
 from nddr_cnn import NDDRCNN
-
+from afa import AFANet
 import argparse
 
 torch.set_num_threads(2)
@@ -26,7 +26,7 @@ def parse_args():
     parser.add_argument('--task_index', default=8, type=int, help='for STL: 0,1,2,3')
     parser.add_argument('--gpu_id', default='0', help='gpu_id') 
     parser.add_argument('--total_epoch', default=200, type=int, help='training epoch')
-    parser.add_argument('--model', default='DMTL', type=str, help='DMTL, CROSS, MTAN, AdaShare, NDDRCNN, AMTL, AMTL_new')
+    parser.add_argument('--model', default='DMTL', type=str, help='DMTL, CROSS, MTAN, AdaShare, NDDRCNN, AFA, AMTL, AMTL_new')
     # for AMTL
     parser.add_argument('--version', default='v1', type=str, help='v1 (a1+a2=1), v2 (0<=a<=1), v3 (gumbel softmax)')
     return parser.parse_args()
@@ -65,6 +65,9 @@ elif params.model == 'AdaShare':
 elif params.model == 'NDDRCNN':
     batch_size = 18
     model = NDDRCNN(tasks=tasks).cuda()
+elif params.model == 'AFA':
+    batch_size = 30
+    model = AFANet(tasks=tasks).cuda()
 elif params.model == 'AMTL':
     batch_size = 18
     model = AMTLmodel(tasks=tasks, version=params.version).cuda()
@@ -111,6 +114,7 @@ for epoch in range(total_epoch):
     train_dataset = iter(trainloader)
     performance_meter = PerformanceMeter(tasks)
     for batch_index in range(train_batch):
+        print(batch_index)
 #         if batch_index > 5:
 #             break
         
