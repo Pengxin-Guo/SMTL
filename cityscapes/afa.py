@@ -376,6 +376,7 @@ class AFANet(nn.Module):
         x1 = self.A_decoder(x1, low_level_feat1)
         x2 = self.B_decoder(x2, low_level_feat2)
         x1 = F.interpolate(x1, size=input.size()[2:], mode='bilinear', align_corners=True)
+        x1 = F.log_softmax(x1, dim=1)
         x2 = F.interpolate(x2, size=input.size()[2:], mode='bilinear', align_corners=True)
         return x1, x2
         

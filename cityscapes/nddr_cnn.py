@@ -85,6 +85,8 @@ class NDDRCNN(nn.Module):
         out = [0 for _ in self.tasks]
         for i, t in enumerate(self.tasks):
             out[i] = F.interpolate(self.heads[i](x[t]), img_size, mode='bilinear', align_corners=True)
+            if t == 'segmentation':
+                out[i] = F.log_softmax(out[i], dim=1)
         return out
 
     def predict(self, x):

@@ -438,8 +438,11 @@ class AFANet(nn.Module):
         x2 = self.B_decoder(x2, low_level_feat2)
         x3 = self.C_decoder(x3, low_level_feat3)
         x1 = F.interpolate(x1, size=input.size()[2:], mode='bilinear', align_corners=True)
+        x1 = F.log_softmax(x1, dim=1)
         x2 = F.interpolate(x2, size=input.size()[2:], mode='bilinear', align_corners=True)
         x3 = F.interpolate(x3, size=input.size()[2:], mode='bilinear', align_corners=True)
+        x3 = x3 / torch.norm(x3, p=2, dim=1, keepdim=True)
+                
         return x1, x2, x3
         
     def predict(self, input):
