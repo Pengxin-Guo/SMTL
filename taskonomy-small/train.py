@@ -6,6 +6,7 @@ import numpy as np
 import scipy.io as sio
 from backbone import DeepLabv3, Cross_Stitch, MTANDeepLabv3, AdaShare, AMTLmodel, AMTLmodel_new
 from nddr_cnn import NDDRCNN
+from afa import AFANet
 from tqdm import tqdm
 
 from create_dataset_taskonomy import Taskonomy, data_prefetcher
@@ -21,7 +22,7 @@ np.random.seed(0)
 
 def parse_args():
     parser = argparse.ArgumentParser(description= 'AMTL for Taskonomy-small')
-    parser.add_argument('--model', default='DMTL', type=str, help='DMTL, CROSS, MTAN, AdaShare, NDDRCNN, AMTL, AMTL_new')
+    parser.add_argument('--model', default='DMTL', type=str, help='DMTL, CROSS, MTAN, AdaShare, NDDRCNN, AFA, AMTL, AMTL_new')
     parser.add_argument('--aug', action='store_true', default=False, help='data augmentation')
     parser.add_argument('--task_index', default=10, type=int, help='for STL: 0,1,2,3,4')
     parser.add_argument('--gpu_id', default='0', help='gpu_id') 
@@ -61,6 +62,9 @@ elif params.model == 'AdaShare':
 elif params.model == 'NDDRCNN':
     batch_size = 100
     model = NDDRCNN(tasks=tasks).cuda()
+elif params.model == 'AFA':
+    batch_size = 2
+    model = AFANet(tasks=tasks).cuda()
 elif params.model == 'AMTL':
     batch_size = 100
     model = AMTLmodel(tasks=tasks, version=params.version).cuda()

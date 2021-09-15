@@ -114,7 +114,6 @@ for epoch in range(total_epoch):
     train_dataset = iter(trainloader)
     performance_meter = PerformanceMeter(tasks)
     for batch_index in range(train_batch):
-        print(batch_index)
 #         if batch_index > 5:
 #             break
         
