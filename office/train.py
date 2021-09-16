@@ -134,7 +134,6 @@ for epoch in range(total_epoch):
             print('!! -- -- epoch {}; best test acc {} {}'.format(epoch, right_num[1]/count[1], acc_avg[1]))
     else:
         # for single task
-        task_index = task_index
-        if (right_num[1]/count[1])[task_index] > best_test_acc:
-            best_test_acc = (right_num[1]/count[1])[task_index]
+        if (right_num[1]/count[1])[params.task_index] > best_test_acc:
+            best_test_acc = (right_num[1]/count[1])[params.task_index]
             print('!! -- -- epoch {}; best test acc {}'.format(epoch, right_num[1]/count[1]))
