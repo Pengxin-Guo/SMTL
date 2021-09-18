@@ -8,6 +8,8 @@ python -u train.py --gpu_id 2 --model AdaShare > out/adashare.out
 
 python -u train.py --gpu_id 2 --model NDDRCNN > out/nddrcnn.out
 
+python -u train.py --gpu_id 2 --model AFA > out/afa.out
+
 python -u train.py --gpu_id 2 --model AMTL --version v1 > out/amtl_v1.out
 
 python -u train.py --gpu_id 2 --model AMTL --version v2 > out/amtl_v2.out
