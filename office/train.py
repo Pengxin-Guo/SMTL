@@ -3,7 +3,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
 import numpy as np
-from backbone import MTAN_ResNet, DMTL, AMTL, AMTL_new
+from backbone import MTAN_ResNet, DMTL, AdaShare, AMTL, AMTL_new
 from create_dataset import office_dataloader
 import argparse
 torch.set_num_threads(3)
@@ -17,7 +17,7 @@ def parse_args():
     parser.add_argument('--dataset', default='office-31', type=str, help='office-31, office-home')
     parser.add_argument('--task_index', default=10, type=int, help='for STL: 0,1,2,3')
     parser.add_argument('--gpu_id', default='0', help='gpu_id') 
-    parser.add_argument('--model', default='DMTL', type=str, help='DMTL, MTAN, AMTL, AMTL_new')
+    parser.add_argument('--model', default='DMTL', type=str, help='DMTL, MTAN, AdaShare, AMTL, AMTL_new')
     parser.add_argument('--train_mode', default='trval', type=str, help='trval, train')
     # for AMTL
     parser.add_argument('--version', default='v1', type=str, help='v1 (a1+a2=1), v2 (0<=a<=1), v3 (gumbel softmax)')
@@ -42,6 +42,9 @@ if params.model == 'DMTL':
 elif params.model == 'MTAN':
     batchsize = 32
     model = MTAN_ResNet(task_num, class_num).cuda()
+elif params.model == 'AdaShare':
+    batchsize = 32
+    model = AdaShare(task_num=task_num, class_num=class_num).cuda()
 elif params.model == 'AMTL':
     batchsize = 32
     model = AMTL(task_num=task_num, class_num=class_num, version=params.version).cuda()

@@ -3,6 +3,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 import resnet
 
+
 class DMTL(nn.Module):
     def __init__(self, task_num, base_net='resnet50', hidden_dim=1024, class_num=31):
         super(DMTL, self).__init__()
@@ -121,6 +122,113 @@ class MTAN_ResNet(nn.Module):
             nn.Sigmoid(),
         )
         return att_block
+        
+
+class AdaShare(nn.Module):
+    def __init__(self, task_num, base_net='resnet50', hidden_dim=1024, class_num=31):
+        super(AdaShare, self).__init__()
+        # base network
+        self.base_network = resnet.__dict__[base_net](pretrained=True)
+        self.task_num = task_num
+        self.shared_conv = nn.Sequential(self.base_network.conv1, self.base_network.bn1, nn.ReLU(inplace=True), self.base_network.maxpool)
+        # We will apply the task-specific policy over the last bottleneck layer in the ResNet. 
+        self.resnet_layer1_d = self.base_network.layer1[:1]
+        self.resnet_layer1_b = self.base_network.layer1[1:-1]
+        self.resnet_layer2_d = self.base_network.layer2[:1]
+        self.resnet_layer2_b = self.base_network.layer2[1:-1]
+        self.resnet_layer3_d = self.base_network.layer3[:1]
+        self.resnet_layer3_b = self.base_network.layer3[1:-1]
+        self.resnet_layer4_d = self.base_network.layer4[:1]
+        self.resnet_layer4_b = self.base_network.layer4[1:-1]
+        
+        # define task-specific policy parameters
+        self.alpha = nn.Parameter(torch.FloatTensor(4, self.task_num))
+        self.alpha.data.fill_(0)
+        
+        # shared layer
+        self.avgpool = self.base_network.avgpool
+        self.hidden_layer_list = [nn.Linear(2048, hidden_dim),
+                                  nn.BatchNorm1d(hidden_dim), nn.ReLU(), nn.Dropout(0.5)]
+        self.hidden_layer = nn.Sequential(*self.hidden_layer_list)
+        # task-specific layer
+        self.classifier_parameter = nn.Parameter(torch.FloatTensor(self.task_num, hidden_dim, class_num))
+
+        # initialization
+        self.hidden_layer[0].weight.data.normal_(0, 0.005)
+        self.hidden_layer[0].bias.data.fill_(0.1)
+        self.classifier_parameter.data.normal_(0, 0.01)
+
+    def forward(self, inputs, task_index):
+        # Shared convolution
+        inputs = self.shared_conv(inputs)
+        # ResNet blocks with task-specific policy
+        res_feature = [0, 0, 0, 0]
+               
+        for i in range(4):
+            if i == 0:
+                res_layer_d = self.resnet_layer1_d
+                res_layer_b = self.resnet_layer1_b
+            elif i == 1:
+                res_layer_d = self.resnet_layer2_d
+                res_layer_b = self.resnet_layer2_b
+            elif i == 2:
+                res_layer_d = self.resnet_layer3_d
+                res_layer_b = self.resnet_layer3_b
+            elif i == 3:
+                res_layer_d = self.resnet_layer4_d
+                res_layer_b = self.resnet_layer4_b
+    
+            temp = torch.sigmoid(self.alpha[i][task_index])
+            temp_alpha = torch.stack([1-temp, temp])
+            temp_alpha = F.gumbel_softmax(torch.log(temp_alpha), tau=0.1, hard=True)
+            if i == 0:
+                temp_feature = res_layer_d(inputs)
+            else:
+                temp_feature = res_layer_d(res_feature[i-1])
+            res_feature[i] = temp_alpha[0] * temp_feature + temp_alpha[1] * res_layer_b(temp_feature)
+                
+        # features = self.base_network(inputs)
+        features = torch.flatten(self.avgpool(res_feature[-1]), 1)
+        hidden_features = self.hidden_layer(features)
+        outputs = torch.mm(hidden_features, self.classifier_parameter[task_index])
+        return outputs
+
+    def predict(self, inputs, task_index):
+        r# Shared convolution
+        inputs = self.shared_conv(inputs)
+        # ResNet blocks with task-specific policy
+        res_feature = [0, 0, 0, 0]
+               
+        for i in range(4):
+            if i == 0:
+                res_layer_d = self.resnet_layer1_d
+                res_layer_b = self.resnet_layer1_b
+            elif i == 1:
+                res_layer_d = self.resnet_layer2_d
+                res_layer_b = self.resnet_layer2_b
+            elif i == 2:
+                res_layer_d = self.resnet_layer3_d
+                res_layer_b = self.resnet_layer3_b
+            elif i == 3:
+                res_layer_d = self.resnet_layer4_d
+                res_layer_b = self.resnet_layer4_b
+    
+            temp = torch.sigmoid(self.alpha[i][task_index])
+            if temp >= 0.5:
+                temp_alpha = [0, 1]
+            else:
+                temp_alpha = [1, 0]
+            if i == 0:
+                temp_feature = res_layer_d(inputs)
+            else:
+                temp_feature = res_layer_d(res_feature[i-1])
+            res_feature[i] = temp_alpha[0] * temp_feature + temp_alpha[1] * res_layer_b(temp_feature)
+                
+        # features = self.base_network(inputs)
+        features = torch.flatten(self.avgpool(res_feature[-1]), 1)
+        hidden_features = self.hidden_layer(features)
+        outputs = torch.mm(hidden_features, self.classifier_parameter[task_index])
+        return outputs
         
 
 class AMTL(nn.Module):
@@ -330,3 +438,54 @@ class AMTL_new(nn.Module):
         
     def get_adaptative_parameter(self):
         return self.alpha
+
+    
+# other backbone
+class Cross_Stitch(nn.Module):
+    def __init__(self, task_num, base_net='resnet50', hidden_dim=1024, class_num=31):
+        super(Cross_Stitch, self).__init__()
+        self.task_num = task_num
+        # base network
+        self.base_network = nn.ModuleList([resnet.__dict__[base_net](pretrained=True) for _ in task_num])
+                
+        # We will apply the cross-stitch unit over the last bottleneck layer in the ResNet. 
+        self.resnet_layer1 = nn.ModuleList([])
+        self.resnet_layer2 = nn.ModuleList([])
+        self.resnet_layer3 = nn.ModuleList([])
+        self.resnet_layer4 = nn.ModuleList([])
+        for i in range(self.task_num):
+            self.resnet_layer1.append(base_network[i].layer1) 
+            self.resnet_layer2.append(base_network[i].layer2)
+            self.resnet_layer3.append(base_network[i].layer3)
+            self.resnet_layer4.append(base_network[i].layer4)
+        
+        # define cross-stitch units
+        self.cross_unit = nn.Parameter(data=torch.ones(4, self.task_num))
+            
+        # shared layer
+        self.avgpool = self.base_network.avgpool
+        self.hidden_layer_list = [nn.Linear(2048, hidden_dim),
+                                  nn.BatchNorm1d(hidden_dim), nn.ReLU(), nn.Dropout(0.5)]
+        self.hidden_layer = nn.Sequential(*self.hidden_layer_list)
+                
+        # task-specific layer
+        self.classifier_parameter = nn.Parameter(torch.FloatTensor(self.task_num, hidden_dim, class_num))
+
+        # initialization
+        self.hidden_layer[0].weight.data.normal_(0, 0.005)
+        self.hidden_layer[0].bias.data.fill_(0.1)
+        self.classifier_parameter.data.normal_(0, 0.01)
+
+    def forward(self, inputs, task_index):
+        res_feature = [0 for _ in self.task_num]
+        for j in range(self.task_num):
+            res_feature[j] = [0, 0, 0, 0]
+            
+        features = self.base_network(inputs)
+        features = torch.flatten(self.avgpool(features), 1)
+        hidden_features = self.hidden_layer(features)
+        outputs = torch.mm(hidden_features, self.classifier_parameter[task_index])
+        return outputs
+
+    def predict(self, inputs, task_index):
+        return self.forward(inputs, task_index)
