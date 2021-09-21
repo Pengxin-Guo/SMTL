@@ -239,28 +239,16 @@ class AdaShare(nn.Module):
         
         backbone = ResnetDilated(resnet.__dict__['resnet18'](pretrained=True))
         self.shared_conv = nn.Sequential(backbone.conv1, backbone.bn1, backbone.relu1, backbone.maxpool)
-        
-        backbones = nn.ModuleList([ResnetDilated(resnet.__dict__['resnet18'](pretrained=True)) for _ in self.tasks])
 
         # We will apply the task-specific policy over the last bottleneck layer in the ResNet. 
-        
-        self.resnet_layer1_d = nn.ModuleList([])
-        self.resnet_layer1_b = nn.ModuleList([])
-        self.resnet_layer2_d = nn.ModuleList([])
-        self.resnet_layer2_b = nn.ModuleList([])
-        self.resnet_layer3_d = nn.ModuleList([])
-        self.resnet_layer3_b = nn.ModuleList([])
-        self.resnet_layer4_d = nn.ModuleList([])
-        self.resnet_layer4_b = nn.ModuleList([])
-        for i in range(len(self.tasks)):
-            self.resnet_layer1_d.append(backbones[i].layer1[:1]) 
-            self.resnet_layer1_b.append(backbones[i].layer1[1:-1])
-            self.resnet_layer2_d.append(backbones[i].layer2[:1]) 
-            self.resnet_layer2_b.append(backbones[i].layer2[1:-1]) 
-            self.resnet_layer3_d.append(backbones[i].layer3[:1]) 
-            self.resnet_layer3_b.append(backbones[i].layer3[1:-1]) 
-            self.resnet_layer4_d.append(backbones[i].layer4[:1]) 
-            self.resnet_layer4_b.append(backbones[i].layer4[1:-1]) 
+        self.resnet_layer1_d = backbone.layer1[:1]
+        self.resnet_layer1_b = backbone.layer1[1:-1]
+        self.resnet_layer2_d = backbone.layer2[:1]
+        self.resnet_layer2_b = backbone.layer2[1:-1]
+        self.resnet_layer3_d = backbone.layer3[:1]
+        self.resnet_layer3_b = backbone.layer3[1:-1]
+        self.resnet_layer4_d = backbone.layer4[:1]
+        self.resnet_layer4_b = backbone.layer4[1:-1]
 
         # define task-specific policy parameters
         self.alpha = nn.Parameter(torch.FloatTensor(4, self.task_num))
@@ -300,10 +288,10 @@ class AdaShare(nn.Module):
                 temp_alpha = torch.stack([1-temp, temp])
                 temp_alpha = F.gumbel_softmax(torch.log(temp_alpha), tau=0.1, hard=True)
                 if i == 0:
-                    temp_feature = res_layer_d[j](x)
+                    temp_feature = res_layer_d(x)
                 else:
-                    temp_feature = res_layer_d[j](res_feature[j][i-1])
-                res_feature[j][i] = temp_alpha[0] * temp_feature + temp_alpha[1] * res_layer_b[j](temp_feature)
+                    temp_feature = res_layer_d(res_feature[j][i-1])
+                res_feature[j][i] = temp_alpha[0] * temp_feature + temp_alpha[1] * res_layer_b(temp_feature)
             
         # Task specific decoders
         out = {}
@@ -342,10 +330,10 @@ class AdaShare(nn.Module):
                 else:
                     temp_alpha = [1, 0]
                 if i == 0:
-                    temp_feature = res_layer_d[j](x)
+                    temp_feature = res_layer_d(x)
                 else:
-                    temp_feature = res_layer_d[j](res_feature[j][i-1])
-                res_feature[j][i] = temp_alpha[0] * temp_feature + temp_alpha[1] * res_layer_b[j](temp_feature)
+                    temp_feature = res_layer_d(res_feature[j][i-1])
+                res_feature[j][i] = temp_alpha[0] * temp_feature + temp_alpha[1] * res_layer_b(temp_feature)
             
         # Task specific decoders
         out = {}
