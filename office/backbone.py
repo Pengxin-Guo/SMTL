@@ -194,7 +194,7 @@ class AdaShare(nn.Module):
         return outputs
 
     def predict(self, inputs, task_index):
-        r# Shared convolution
+        # Shared convolution
         inputs = self.shared_conv(inputs)
         # ResNet blocks with task-specific policy
         res_feature = [0, 0, 0, 0]
@@ -438,54 +438,3 @@ class AMTL_new(nn.Module):
         
     def get_adaptative_parameter(self):
         return self.alpha
-
-    
-# other backbone
-class Cross_Stitch(nn.Module):
-    def __init__(self, task_num, base_net='resnet50', hidden_dim=1024, class_num=31):
-        super(Cross_Stitch, self).__init__()
-        self.task_num = task_num
-        # base network
-        self.base_network = nn.ModuleList([resnet.__dict__[base_net](pretrained=True) for _ in task_num])
-                
-        # We will apply the cross-stitch unit over the last bottleneck layer in the ResNet. 
-        self.resnet_layer1 = nn.ModuleList([])
-        self.resnet_layer2 = nn.ModuleList([])
-        self.resnet_layer3 = nn.ModuleList([])
-        self.resnet_layer4 = nn.ModuleList([])
-        for i in range(self.task_num):
-            self.resnet_layer1.append(base_network[i].layer1) 
-            self.resnet_layer2.append(base_network[i].layer2)
-            self.resnet_layer3.append(base_network[i].layer3)
-            self.resnet_layer4.append(base_network[i].layer4)
-        
-        # define cross-stitch units
-        self.cross_unit = nn.Parameter(data=torch.ones(4, self.task_num))
-            
-        # shared layer
-        self.avgpool = self.base_network.avgpool
-        self.hidden_layer_list = [nn.Linear(2048, hidden_dim),
-                                  nn.BatchNorm1d(hidden_dim), nn.ReLU(), nn.Dropout(0.5)]
-        self.hidden_layer = nn.Sequential(*self.hidden_layer_list)
-                
-        # task-specific layer
-        self.classifier_parameter = nn.Parameter(torch.FloatTensor(self.task_num, hidden_dim, class_num))
-
-        # initialization
-        self.hidden_layer[0].weight.data.normal_(0, 0.005)
-        self.hidden_layer[0].bias.data.fill_(0.1)
-        self.classifier_parameter.data.normal_(0, 0.01)
-
-    def forward(self, inputs, task_index):
-        res_feature = [0 for _ in self.task_num]
-        for j in range(self.task_num):
-            res_feature[j] = [0, 0, 0, 0]
-            
-        features = self.base_network(inputs)
-        features = torch.flatten(self.avgpool(features), 1)
-        hidden_features = self.hidden_layer(features)
-        outputs = torch.mm(hidden_features, self.classifier_parameter[task_index])
-        return outputs
-
-    def predict(self, inputs, task_index):
-        return self.forward(inputs, task_index)
