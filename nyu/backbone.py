@@ -290,7 +290,6 @@ class AdaShare(nn.Module):
         ch = [256, 512, 1024, 2048]
 
         # We will apply the task-specific policy over the last bottleneck layer in the ResNet. 
-        
         self.resnet_layer1_d = nn.ModuleList([])
         self.resnet_layer1_b = nn.ModuleList([])
         self.resnet_layer2_d = nn.ModuleList([])
