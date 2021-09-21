@@ -438,3 +438,86 @@ class AMTL_new(nn.Module):
         
     def get_adaptative_parameter(self):
         return self.alpha
+
+
+# other backbone
+class Cross_Stitch(nn.Module):
+    def __init__(self, task_num, base_net='resnet50', hidden_dim=1024, class_num=31):
+        super(Cross_Stitch, self).__init__()
+        self.task_num = task_num
+        # base network
+        self.base_network = resnet.__dict__[base_net](pretrained=True)
+        self.shared_conv = nn.Sequential(self.base_network.conv1, self.base_network.bn1, nn.ReLU(inplace=True), self.base_network.maxpool)
+        
+        self.base_networks = nn.ModuleList([resnet.__dict__[base_net](pretrained=True) for _ in range(self.task_num)])
+        
+        # We will apply the cross-stitch unit over the last bottleneck layer in the ResNet. 
+        self.resnet_layer1 = nn.ModuleList([])
+        self.resnet_layer2 = nn.ModuleList([])
+        self.resnet_layer3 = nn.ModuleList([])
+        self.resnet_layer4 = nn.ModuleList([])
+        for i in range(self.task_num):
+            self.resnet_layer1.append(self.base_networks[i].layer1) 
+            self.resnet_layer2.append(self.base_networks[i].layer2)
+            self.resnet_layer3.append(self.base_networks[i].layer3)
+            self.resnet_layer4.append(self.base_networks[i].layer4)
+        
+        # define cross-stitch units
+        self.cross_unit = nn.Parameter(data=torch.ones(4, self.task_num))
+        
+        # shared layer
+        self.avgpool = self.base_network.avgpool
+        self.hidden_layer_list = [nn.Linear(2048, hidden_dim),
+                                  nn.BatchNorm1d(hidden_dim), nn.ReLU(), nn.Dropout(0.5)]
+        self.hidden_layer = nn.Sequential(*self.hidden_layer_list)
+        # task-specific layer
+        self.classifier_parameter = nn.Parameter(torch.FloatTensor(task_num, hidden_dim, class_num))
+
+        # initialization
+        self.hidden_layer[0].weight.data.normal_(0, 0.005)
+        self.hidden_layer[0].bias.data.fill_(0.1)
+        self.classifier_parameter.data.normal_(0, 0.01)
+
+    def forward(self, inputs):
+        # Shared convolution
+        temp_inputs = [0 for _ in range(self.task_num)]
+        for i in range(self.task_num):
+            temp_inputs[i] = self.shared_conv(inputs[i])
+        
+        res_feature = [0 for _ in range(self.task_num)]
+        for j in range(self.task_num):
+            res_feature[j] = [0, 0, 0, 0]
+            
+        for i in range(4):
+            if i == 0:
+                res_layer = self.resnet_layer1
+            elif i == 1:
+                res_layer = self.resnet_layer2
+            elif i == 2:
+                res_layer = self.resnet_layer3
+            elif i == 3:
+                res_layer = self.resnet_layer4
+            for j in range(self.task_num):
+                if i == 0:
+                    res_feature[j][i] = res_layer[j](temp_inputs[j])
+                else:
+                    if self.task_num == 3:
+                        cross_stitch = self.cross_unit[i - 1][0] * res_feature[0][i - 1] + \
+                                       self.cross_unit[i - 1][1] * res_feature[1][i - 1] + \
+                                       self.cross_unit[i - 1][2] * res_feature[2][i - 1]
+                    else:
+                        cross_stitch = self.cross_unit[i - 1][0] * res_feature[0][i - 1] + \
+                                       self.cross_unit[i - 1][1] * res_feature[1][i - 1] + \
+                                       self.cross_unit[i - 1][2] * res_feature[2][i - 1] + \
+                                       self.cross_unit[i - 1][3] * res_feature[3][i - 1]
+                    res_feature[j][i] = res_layer[j](cross_stitch)
+        
+        outputs = [0 for _ in range(self.task_num)]
+        for i in range(self.task_num):
+            temp_res_feature = torch.flatten(self.avgpool(res_feature[i][-1]), 1)
+            hidden_features = self.hidden_layer(temp_res_feature)
+            outputs[i] = torch.mm(hidden_features, self.classifier_parameter[i])
+        return outputs
+
+    def predict(self, inputs):
+        return self.forward(inputs)

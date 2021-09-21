@@ -63,3 +63,29 @@ def office_dataloader(dataset, batchsize):
                                               drop_last=drop_last)
             iter_data_loader[k][mode] = iter(data_loader[k][mode])
     return data_loader, iter_data_loader
+    
+
+def office_dataloader_other(dataset, batchsize):
+    if dataset == 'office-31':
+        tasks = ['amazon', 'dslr', 'webcam']
+    elif dataset == 'office-home':
+        tasks = ['Art', 'Clipart', 'Product', 'Real_World']
+    data_loader = {}
+    iter_data_loader = {}
+    for k, d in enumerate(tasks):
+        data_loader[k] = {}
+        iter_data_loader[k] = {}
+        for mode in ['train', 'val', 'test', 'trval']:
+            shuffle = False if mode == 'test' else True
+            # drop_last = False if mode == 'test' else True
+            drop_last = True
+            txt_dataset = office_Dataset(dataset, d, mode)
+            print(d, mode, len(txt_dataset))
+            data_loader[k][mode] = DataLoader(txt_dataset, 
+                                              num_workers=0, 
+                                              pin_memory=True, 
+                                              batch_size=batchsize, 
+                                              shuffle=shuffle,
+                                              drop_last=drop_last)
+            iter_data_loader[k][mode] = iter(data_loader[k][mode])
+    return data_loader, iter_data_loader
