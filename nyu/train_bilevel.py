@@ -164,7 +164,7 @@ for index in range(total_epoch):
         loss_sum = torch.sum(loss_train*lambda_weight[:, index])
         
         meta_model.zero_grad()
-        grads = torch.autograd.grad(loss_sum, (meta_model.parameters()), create_graph=True, allow_unused=True)
+        grads = torch.autograd.grad(loss_sum, (meta_model.parameters()), create_graph=True)
         
         for g_index, name in enumerate(model_np.keys()):
             p = set_param(meta_model, name, mode='get')
