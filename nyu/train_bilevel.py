@@ -36,10 +36,10 @@ dataset_path = '/data/dataset/nyuv2/'
 
 def build_model():
     if params.model == 'AMTL':
-        batch_size = 2
+        batch_size = 4
         model = AMTLmodel(version=params.version).cuda()
     elif params.model == 'AMTL_new':
-        batch_size = 14
+        batch_size = 4
         model = AMTLmodel_new(version=params.version).cuda()
     else:
         print("No correct model parameter!")
@@ -49,7 +49,7 @@ def build_model():
 model, batch_size = build_model()
 
 nyuv2_train_set = NYUv2(root=dataset_path, mode=params.train_mode, augmentation=params.aug)
-nyuv2_val_test = NYUv2(root=dataset_path, mode='val', augmentation='False')
+nyuv2_val_set = NYUv2(root=dataset_path, mode='val', augmentation=params.aug)
 nyuv2_test_set = NYUv2(root=dataset_path, mode='test', augmentation='False')
 
 nyuv2_train_loader = torch.utils.data.DataLoader(
@@ -61,7 +61,7 @@ nyuv2_train_loader = torch.utils.data.DataLoader(
     drop_last=True)
     
 nyuv2_val_loader = torch.utils.data.DataLoader(
-    dataset=nyuv2_train_set,
+    dataset=nyuv2_val_set,
     batch_size=batch_size,
     shuffle=True,
     num_workers=2,
@@ -103,7 +103,7 @@ class Model_alpha(nn.Module):
     def get_adaptative_parameter(self):
         return self.alpha
 
-h = Model_alpha(task_num=3, version=params.version).cuda()
+h = Model_alpha(task_num=task_num, version=params.version).cuda()
 h.train()
 h_optimizer = torch.optim.Adam(h.parameters(), lr=1e-4)
 
@@ -134,14 +134,12 @@ lambda_weight = torch.ones([task_num, total_epoch]).cuda()
 for index in range(total_epoch):
     s_t = time.time()
     cost = torch.zeros(24)
-
     # iteration for all batches
     model.train()
     train_dataset = iter(nyuv2_train_loader)
     val_dataset = iter(nyuv2_val_loader)
     conf_mat = ConfMatrix(model.class_nb)
     for k in range(min(train_batch, val_batch)):
-        
         meta_model, _ = build_model()
         meta_model.load_state_dict(model.state_dict())
         
@@ -152,9 +150,7 @@ for index in range(total_epoch):
         train_data, train_label, train_depth, train_normal = train_dataset.next()
         train_data, train_label = train_data.cuda(non_blocking=True), train_label.long().cuda(non_blocking=True)
         train_depth, train_normal = train_depth.cuda(non_blocking=True), train_normal.cuda(non_blocking=True)
-
         train_pred = meta_model(train_data, h)
-
         train_loss = [model_fit(train_pred[0], train_label, 'semantic'),
                       model_fit(train_pred[1], train_depth, 'depth'),
                       model_fit(train_pred[2], train_normal, 'normal')]
@@ -223,25 +219,25 @@ for index in range(total_epoch):
     model.eval()
     conf_mat = ConfMatrix(model.class_nb)
     with torch.no_grad():  # operations inside don't track history
-        val_dataset = iter(nyuv2_test_loader)
-        val_batch = len(nyuv2_test_loader)
-        for k in range(val_batch):
-            val_data, val_label, val_depth, val_normal = val_dataset.next()
-            val_data, val_label = val_data.cuda(non_blocking=True), val_label.long().cuda(non_blocking=True)
-            val_depth, val_normal = val_depth.cuda(non_blocking=True), val_normal.cuda(non_blocking=True)
-            val_pred = model.predict(val_data, h)
-            val_loss = [model_fit(val_pred[0], val_label, 'semantic'),
-                         model_fit(val_pred[1], val_depth, 'depth'),
-                         model_fit(val_pred[2], val_normal, 'normal')]
+        test_dataset = iter(nyuv2_test_loader)
+        test_batch = len(nyuv2_test_loader)
+        for k in range(test_batch):
+            test_data, test_label, test_depth, test_normal = test_dataset.next()
+            test_data, test_label = test_data.cuda(non_blocking=True), test_label.long().cuda(non_blocking=True)
+            test_depth, test_normal = test_depth.cuda(non_blocking=True), test_normal.cuda(non_blocking=True)
+            test_pred = model.predict(test_data, h)
+            test_loss = [model_fit(test_pred[0], test_label, 'semantic'),
+                         model_fit(test_pred[1], test_depth, 'depth'),
+                         model_fit(test_pred[2], test_normal, 'normal')]
 
-            conf_mat.update(val_pred[0].argmax(1).flatten(), val_label.flatten())
+            conf_mat.update(test_pred[0].argmax(1).flatten(), test_label.flatten())
 
-            cost[12] = val_loss[0].item()
-            cost[15] = val_loss[1].item()
-            cost[16], cost[17] = depth_error(val_pred[1], val_depth)
-            cost[18] = val_loss[2].item()
-            cost[19], cost[20], cost[21], cost[22], cost[23] = normal_error(val_pred[2], val_normal)
-            avg_cost[index, 12:] += cost[12:] / val_batch
+            cost[12] = test_loss[0].item()
+            cost[15] = test_loss[1].item()
+            cost[16], cost[17] = depth_error(test_pred[1], test_depth)
+            cost[18] = test_loss[2].item()
+            cost[19], cost[20], cost[21], cost[22], cost[23] = normal_error(test_pred[2], test_normal)
+            avg_cost[index, 12:] += cost[12:] / test_batch
 
         # compute mIoU and acc
         avg_cost[index, 13], avg_cost[index, 14] = conf_mat.get_metrics()
