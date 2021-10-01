@@ -37,28 +37,28 @@ os.environ["CUDA_VISIBLE_DEVICES"] = params.gpu_id
 dataset_path = '/data/dataset/nyuv2/'
 
 if params.model == 'DMTL':
-    batch_size = 50
+    batch_size = 8
     model = DeepLabv3().cuda()
 elif params.model == 'CROSS':
-    batch_size = 20
+    batch_size = 4
     model = Cross_Stitch().cuda()
 elif params.model == 'MTAN':
-    batch_size = 19
+    batch_size = 4
     model = MTANDeepLabv3().cuda()
 elif params.model == 'AdaShare':
-    batch_size = 25
+    batch_size = 4
     model = AdaShare().cuda()
 elif params.model == 'NDDRCNN':
-    batch_size = 15
+    batch_size = 4
     model = NDDRCNN().cuda()
 elif params.model == 'AFA':
-    batch_size = 25
+    batch_size = 4
     model = AFANet().cuda()
 elif params.model == 'AMTL':
-    batch_size = 15
+    batch_size = 4
     model = AMTLmodel(version=params.version).cuda()
 elif params.model == 'AMTL_new':
-    batch_size = 14
+    batch_size = 4
     model = AMTLmodel_new(version=params.version).cuda()
 else:
     print("No correct model parameter!")
