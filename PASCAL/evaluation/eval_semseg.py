@@ -97,6 +97,8 @@ class SemsegMeter(object):
         self.tp = [0] * self.n_classes
         self.fp = [0] * self.n_classes
         self.fn = [0] * self.n_classes
+        
+        self.pixAcc = 0
 
     @torch.no_grad()
     def update(self, pred, gt):
@@ -110,11 +112,15 @@ class SemsegMeter(object):
             self.tp[i_part] += torch.sum(tmp_gt & tmp_pred & valid).item()
             self.fp[i_part] += torch.sum(~tmp_gt & tmp_pred & valid).item()
             self.fn[i_part] += torch.sum(tmp_gt & ~tmp_pred & valid).item()
+        
+        self.pixAcc = (gt == pred).float().mean()
 
     def reset(self):
         self.tp = [0] * self.n_classes
         self.fp = [0] * self.n_classes
         self.fn = [0] * self.n_classes
+        
+        self.pixAcc = 0
             
     def get_score(self, verbose=True):
         jac = [0] * self.n_classes
@@ -124,7 +130,7 @@ class SemsegMeter(object):
         eval_result = dict()
 #         eval_result['jaccards_all_categs'] = jac
         eval_result['mIoU'] = np.mean(jac)
-
+        eval_result['pixelAccs'] = self.pixAcc
 
         if verbose:
             print('\nSemantic Segmentation mIoU: {0:.4f}\n'.format(100 * eval_result['mIoU']))
