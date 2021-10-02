@@ -114,8 +114,6 @@ for epoch in range(total_epoch):
     train_dataset = iter(trainloader)
     performance_meter = PerformanceMeter(tasks)
     for batch_index in range(train_batch):
-        if batch_index > 1:
-            break
         
         train_batch_data = train_dataset.next()
         train_data = train_batch_data['image'].cuda(non_blocking=True)
@@ -162,8 +160,7 @@ for epoch in range(total_epoch):
         val_batch = len(testloader)
         performance_meter = PerformanceMeter(tasks)
         for k in range(val_batch):
-            if k > 1:
-                break
+
             val_batch_data = val_dataset.next()
             val_data = val_batch_data['image'].cuda(non_blocking=True)
             targets = {task: val_batch_data[task].cuda(non_blocking=True) for task in tasks}
