@@ -424,7 +424,7 @@ class AMTLmodel(nn.Module):
         
         # adaptative parameters
         if self.version == 'v1' or self.version =='v2':
-        # AMTL-v1 and v2
+            # AMTL-v1 and v2
             self.alpha = nn.Parameter(torch.FloatTensor(len(self.tasks), 2))
             self.alpha.data.fill_(0.5)   # init 0.5(shared) 0.5(specific)
             # self.alpha.data[:,0].fill_(0)  # shared
@@ -542,7 +542,7 @@ class AMTLmodel_new(nn.Module):
         
         # adaptative parameters
         if self.version == 'v1' or self.version =='v2':
-        # AMTL-v1 and v2
+            # AMTL-v1 and v2
             self.alpha = nn.Parameter(torch.FloatTensor(len(self.tasks), 2))
             self.alpha.data.fill_(0.5)   # init 0.5(shared) 0.5(specific)
             # self.alpha.data[:,0].fill_(0)  # shared

@@ -16,10 +16,6 @@ def model_fit(x_pred, x_output, task_type):
         # depth loss: l1 norm
         loss = torch.sum(torch.abs(x_pred - x_output) * binary_mask) / torch.nonzero(binary_mask, as_tuple=False).size(0)
 
-    if task_type == 'normal':
-        # normal loss: dot product
-        loss = 1 - torch.sum((x_pred * x_output) * binary_mask) / torch.nonzero(binary_mask, as_tuple=False).size(0)
-
     return loss
 
 class ConfMatrix(object):

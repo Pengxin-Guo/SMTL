@@ -22,12 +22,12 @@ python -u  train.py --model AFA --gpu_id 1 > out/afa.out
 
 python -u  train.py --model AMTL --version v1 --gpu_id 1 > out/amtl_v1.out
 
-python -u  train.py --model AMTL --version v2 --gpu_id 1 > out/amtl_v2.out
+# python -u  train.py --model AMTL --version v2 --gpu_id 1 > out/amtl_v2.out
 
 python -u  train.py --model AMTL --version v3 --gpu_id 1 > out/amtl_v3.out
 
 python -u  train.py --model AMTL_new --version v1 --gpu_id 1 > out/amtl_new_v1.out
 
-python -u  train.py --model AMTL_new --version v2 --gpu_id 1 > out/amtl_new_v2.out
+# python -u  train.py --model AMTL_new --version v2 --gpu_id 1 > out/amtl_new_v2.out
 
 python -u  train.py --model AMTL_new --version v3 --gpu_id 1 > out/amtl_new_v3.out
