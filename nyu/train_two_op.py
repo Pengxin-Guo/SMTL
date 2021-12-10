@@ -4,7 +4,7 @@ import torch.nn.functional as F
 import torch.optim as optim
 import numpy as np
 import scipy.io as sio
-from backbone_bilevel import AMTLmodel, AMTLmodel_new
+from backbone_bilevel import SMTLmodel, SMTLmodel_new
 from utils import *
 
 from create_dataset import NYUv2
@@ -16,13 +16,13 @@ random.seed(0)
 np.random.seed(0)
 
 def parse_args():
-    parser = argparse.ArgumentParser(description= 'AMTL on NYUv2')
+    parser = argparse.ArgumentParser(description= 'SMTL on NYUv2')
     parser.add_argument('--gpu_id', default='0', help='gpu_id') 
-    parser.add_argument('--model', default='AMTL', type=str, help='AMTL, AMTL_new')
+    parser.add_argument('--model', default='SMTL', type=str, help='SMTL, SMTL_new')
     parser.add_argument('--aug', type=str, default='False', help='data augmentation')
     parser.add_argument('--train_mode', default='trainval', type=str, help='trainval, train')
     parser.add_argument('--total_epoch', default=200, type=int, help='training epoch')
-    # for AMTL
+    # for SMTL
     parser.add_argument('--version', default='v1', type=str, help='v1 (a1+a2=1), v2 (0<=a<=1), v3 (gumbel softmax)')
     return parser.parse_args()
 
@@ -35,12 +35,12 @@ os.environ["CUDA_VISIBLE_DEVICES"] = params.gpu_id
 dataset_path = '/data/dataset/nyuv2/'
 
 def build_model():
-    if params.model == 'AMTL':
+    if params.model == 'SMTL':
         batch_size = 4
-        model = AMTLmodel(version=params.version).cuda()
-    elif params.model == 'AMTL_new':
+        model = SMTLmodel(version=params.version).cuda()
+    elif params.model == 'SMTL_new':
         batch_size = 4
-        model = AMTLmodel_new(version=params.version).cuda()
+        model = SMTLmodel_new(version=params.version).cuda()
     else:
         print("No correct model parameter!")
         exit()
@@ -80,13 +80,13 @@ class Model_alpha(nn.Module):
         super(Model_alpha, self).__init__()
         # adaptative parameters
         if version == 'v1' or version =='v2':
-            # AMTL-v1 and v2
+            # SMTL-v1 and v2
             self.alpha = nn.Parameter(torch.FloatTensor(task_num, 2))
             self.alpha.data.fill_(0.5)   # init 0.5(shared) 0.5(specific)
             # self.alpha.data[:,0].fill_(0)  # shared
             # self.alpha.data[:,1].fill_(1)  # specific
         elif version == 'v3':
-            # AMTL-v3, gumbel softmax
+            # SMTL-v3, gumbel softmax
             self.alpha = nn.Parameter(torch.FloatTensor(task_num))
             self.alpha.data.fill_(0)
         else:
@@ -178,15 +178,15 @@ for index in range(total_epoch):
     
     scheduler.step()
     e_t = time.time()
-    if params.model == 'AMTL' or params.model == 'AMTL_new':
+    if params.model == 'SMTL' or params.model == 'SMTL_new':
         alpha = h.get_adaptative_parameter()
         for i in range(task_num):
             if params.version == 'v1':
-                print(alpha[i], F.softmax(alpha[i], 0))   # AMTL-v1, alpha_1 + alpha_2 = 1
+                print(alpha[i], F.softmax(alpha[i], 0))   # SMTL-v1, alpha_1 + alpha_2 = 1
             elif params.version == 'v2':
-                print(alpha[i], torch.exp(alpha[i]) / (1 + torch.exp(alpha[i])))  # AMTL-v2, 0 <= alpha <= 1
+                print(alpha[i], torch.exp(alpha[i]) / (1 + torch.exp(alpha[i])))  # SMTL-v2, 0 <= alpha <= 1
             elif params.version == 'v3':
-                # below for AMTL-v3, gumbel softmax
+                # below for SMTL-v3, gumbel softmax
                 temp = torch.sigmoid(alpha[i])
                 temp_alpha = torch.stack([1-temp, temp])
                 print(i, temp_alpha)
