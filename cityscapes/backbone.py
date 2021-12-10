@@ -393,9 +393,9 @@ class AdaShare(nn.Module):
 
 
 # do selection at hidden layer
-class AMTLmodel(nn.Module):
+class SMTLmodel(nn.Module):
     def __init__(self, dataset='CityScape', version='v1'):
-        super(AMTLmodel, self).__init__()
+        super(SMTLmodel, self).__init__()
         self.version = version
         # shared encoder
         self.backbone_s = ResnetDilated(resnet.__dict__['resnet50'](pretrained=True))
@@ -417,13 +417,13 @@ class AMTLmodel(nn.Module):
         
         # adaptative parameters
         if self.version == 'v1' or self.version =='v2':
-            # AMTL-v1 and v2
+            # SMTL-v1 and v2
             self.alpha = nn.Parameter(torch.FloatTensor(len(self.tasks), 2))
             self.alpha.data.fill_(0.5)   # init 0.5(shared) 0.5(specific)
             # self.alpha.data[:,0].fill_(0)  # shared
             # self.alpha.data[:,1].fill_(1)  # specific
         elif self.version == 'v3':
-            # AMTL-v3, gumbel softmax
+            # SMTL-v3, gumbel softmax
             self.alpha = nn.Parameter(torch.FloatTensor(len(self.tasks)))
             self.alpha.data.fill_(0)
         else:
@@ -445,11 +445,11 @@ class AMTLmodel(nn.Module):
         x_h = [0 for _ in self.tasks]
         for i in range(len(self.tasks)):
             if self.version == 'v1':
-                temp_alpha = F.softmax(self.alpha[i], 0)     # AMTL-v1, alpha_1 + alpha_2 = 1
+                temp_alpha = F.softmax(self.alpha[i], 0)     # SMTL-v1, alpha_1 + alpha_2 = 1
             elif self.version == 'v2':
-                temp_alpha = torch.exp(self.alpha[i]) / (1 + torch.exp(self.alpha[i])) # AMTL-v2, 0 <= alpha <=1
+                temp_alpha = torch.exp(self.alpha[i]) / (1 + torch.exp(self.alpha[i])) # SMTL-v2, 0 <= alpha <=1
             elif self.version == 'v3':
-                # below for AMTL-v3, gumbel softmax
+                # below for SMTL-v3, gumbel softmax
                 temp = torch.sigmoid(self.alpha[i])
                 temp_alpha = torch.stack([1-temp, temp])
                 temp_alpha = F.gumbel_softmax(torch.log(temp_alpha), tau=0.1, hard=True)
@@ -479,11 +479,11 @@ class AMTLmodel(nn.Module):
         x_h = [0 for _ in self.tasks]
         for i in range(len(self.tasks)):
             if self.version == 'v1':
-                temp_alpha = F.softmax(self.alpha[i], 0)     # AMTL-v1, alpha_1 + alpha_2 = 1
+                temp_alpha = F.softmax(self.alpha[i], 0)     # SMTL-v1, alpha_1 + alpha_2 = 1
             elif self.version == 'v2':
-                temp_alpha = torch.exp(self.alpha[i]) / (1 + torch.exp(self.alpha[i])) # AMTL-v2, 0 <= alpha <=1
+                temp_alpha = torch.exp(self.alpha[i]) / (1 + torch.exp(self.alpha[i])) # SMTL-v2, 0 <= alpha <=1
             elif self.version == 'v3':
-                # below for AMTL-v3, gumbel softmax
+                # below for SMTL-v3, gumbel softmax
                 temp = torch.sigmoid(self.alpha[i])
                 if temp >= 0.5:
                     temp_alpha = [0, 1]
@@ -511,9 +511,9 @@ class AMTLmodel(nn.Module):
         
 
 # do selection at classifier layer
-class AMTLmodel_new(nn.Module):
+class SMTLmodel_new(nn.Module):
     def __init__(self, dataset='CityScape', version='v1'):
-        super(AMTLmodel_new, self).__init__()
+        super(SMTLmodel_new, self).__init__()
         self.version = version
         # shared encoder
         self.backbone_s = ResnetDilated(resnet.__dict__['resnet50'](pretrained=True))
@@ -535,13 +535,13 @@ class AMTLmodel_new(nn.Module):
         
         # adaptative parameters
         if self.version == 'v1' or self.version =='v2':
-            # AMTL-v1 and v2
+            # SMTL-v1 and v2
             self.alpha = nn.Parameter(torch.FloatTensor(len(self.tasks), 2))
             self.alpha.data.fill_(0.5)   # init 0.5(shared) 0.5(specific)
             # self.alpha.data[:,0].fill_(0)  # shared
             # self.alpha.data[:,1].fill_(1)  # specific
         elif self.version == 'v3':
-            # AMTL-v3, gumbel softmax
+            # SMTL-v3, gumbel softmax
             self.alpha = nn.Parameter(torch.FloatTensor(len(self.tasks)))
             self.alpha.data.fill_(0)
         else:
@@ -571,11 +571,11 @@ class AMTLmodel_new(nn.Module):
             out_s[i] = F.interpolate(self.decoders_s[i](x_s), img_size, mode='bilinear', align_corners=True)
             out_t[i] = F.interpolate(self.decoders_t[i](x_t[i]), img_size, mode='bilinear', align_corners=True)
             if self.version == 'v1':
-                temp_alpha = F.softmax(self.alpha[i], 0)     # AMTL-v1, alpha_1 + alpha_2 = 1
+                temp_alpha = F.softmax(self.alpha[i], 0)     # SMTL-v1, alpha_1 + alpha_2 = 1
             elif self.version == 'v2':
-                temp_alpha = torch.exp(self.alpha[i]) / (1 + torch.exp(self.alpha[i])) # AMTL-v2, 0 <= alpha <=1
+                temp_alpha = torch.exp(self.alpha[i]) / (1 + torch.exp(self.alpha[i])) # SMTL-v2, 0 <= alpha <=1
             elif self.version == 'v3':
-                # below for AMTL-v3, gumbel softmax
+                # below for SMTL-v3, gumbel softmax
                 temp = torch.sigmoid(self.alpha[i])
                 temp_alpha = torch.stack([1-temp, temp])
                 temp_alpha = F.gumbel_softmax(torch.log(temp_alpha), tau=0.1, hard=True)
@@ -610,11 +610,11 @@ class AMTLmodel_new(nn.Module):
             out_s[i] = F.interpolate(self.decoders_s[i](x_s), img_size, mode='bilinear', align_corners=True)
             out_t[i] = F.interpolate(self.decoders_t[i](x_t[i]), img_size, mode='bilinear', align_corners=True)
             if self.version == 'v1':
-                temp_alpha = F.softmax(self.alpha[i], 0)     # AMTL-v1, alpha_1 + alpha_2 = 1
+                temp_alpha = F.softmax(self.alpha[i], 0)     # SMTL-v1, alpha_1 + alpha_2 = 1
             elif self.version == 'v2':
-                temp_alpha = torch.exp(self.alpha[i]) / (1 + torch.exp(self.alpha[i])) # AMTL-v2, 0 <= alpha <=1
+                temp_alpha = torch.exp(self.alpha[i]) / (1 + torch.exp(self.alpha[i])) # SMTL-v2, 0 <= alpha <=1
             elif self.version == 'v3':
-                # below for AMTL-v3, gumbel softmax
+                # below for SMTL-v3, gumbel softmax
                 temp = torch.sigmoid(self.alpha[i])
                 if temp >= 0.5:
                     temp_alpha = [0, 1]
