@@ -86,7 +86,7 @@ class PASCALContext(data.Dataset):
                  num_human_parts=6,
                  ):
         
-        PROJECT_ROOT_DIR = '/home/guopx/work/AMTL/PASCAL/'
+        PROJECT_ROOT_DIR = '/home/guopx/work/SMTL/PASCAL/'
         
         FLAGVALS = {'image': cv2.INTER_CUBIC}
         if do_edge:

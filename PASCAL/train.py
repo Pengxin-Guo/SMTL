@@ -10,7 +10,7 @@ from data.custom_collate import collate_mil
 from loss_functions import get_loss
 from evaluation.evaluate_utils import PerformanceMeter, get_output
 
-from backbone import DeepLabv3, Cross_Stitch, MTANDeepLabv3, AdaShare, AMTLmodel, AMTLmodel_new
+from backbone import DeepLabv3, Cross_Stitch, MTANDeepLabv3, AdaShare, SMTLmodel, SMTLmodel_new
 from nddr_cnn import NDDRCNN
 from afa import AFANet
 import argparse
@@ -22,12 +22,12 @@ random.seed(0)
 np.random.seed(0)
 
 def parse_args():
-    parser = argparse.ArgumentParser(description= 'AMTL for PASCAL')
+    parser = argparse.ArgumentParser(description= 'SMTL for PASCAL')
     parser.add_argument('--task_index', default=8, type=int, help='for STL: 0,1,2,3')
     parser.add_argument('--gpu_id', default='0', help='gpu_id') 
     parser.add_argument('--total_epoch', default=200, type=int, help='training epoch')
-    parser.add_argument('--model', default='DMTL', type=str, help='DMTL, CROSS, MTAN, AdaShare, NDDRCNN, AFA, AMTL, AMTL_new')
-    # for AMTL
+    parser.add_argument('--model', default='DMTL', type=str, help='DMTL, CROSS, MTAN, AdaShare, NDDRCNN, AFA, SMTL, SMTL_new')
+    # for SMTL
     parser.add_argument('--version', default='v1', type=str, help='v1 (a1+a2=1), v2 (0<=a<=1), v3 (gumbel softmax)')
     return parser.parse_args()
 
@@ -68,12 +68,12 @@ elif params.model == 'NDDRCNN':
 elif params.model == 'AFA':
     batch_size = 8
     model = AFANet(tasks=tasks).cuda()
-elif params.model == 'AMTL':
+elif params.model == 'SMTL':
     batch_size = 18
-    model = AMTLmodel(tasks=tasks, version=params.version).cuda()
-elif params.model == 'AMTL_new':
+    model = SMTLmodel(tasks=tasks, version=params.version).cuda()
+elif params.model == 'SMTL_new':
     batch_size = 15
-    model = AMTLmodel_new(tasks=tasks, version=params.version).cuda()
+    model = SMTLmodel_new(tasks=tasks, version=params.version).cuda()
 else:
     print("No correct model parameter!")
     exit()
@@ -134,15 +134,15 @@ for epoch in range(total_epoch):
                                  {t: targets[t] for t in tasks})
     
     eval_results_train = performance_meter.get_score(verbose=False)
-    if params.model == 'AMTL' or params.model == 'AMTL_new':
+    if params.model == 'SMTL' or params.model == 'SMTL_new':
         alpha = model.get_adaptative_parameter()
         for i in range(task_num):
             if params.version == 'v1':
-                print(alpha[i], F.softmax(alpha[i], 0))   # AMTL-v1, alpha_1 + alpha_2 = 1
+                print(alpha[i], F.softmax(alpha[i], 0))   # SMTL-v1, alpha_1 + alpha_2 = 1
             elif params.version == 'v2':
-                print(alpha[i], torch.exp(alpha[i]) / (1 + torch.exp(alpha[i])))  # AMTL-v2, 0 <= alpha <= 1
+                print(alpha[i], torch.exp(alpha[i]) / (1 + torch.exp(alpha[i])))  # SMTL-v2, 0 <= alpha <= 1
             elif params.version == 'v3':
-                # below for AMTL-v3, gumbel softmax
+                # below for SMTL-v3, gumbel softmax
                 temp = torch.sigmoid(alpha[i])
                 temp_alpha = torch.stack([1-temp, temp])
                 print(i, temp_alpha)
