@@ -3,7 +3,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
 import numpy as np
-from backbone import MTAN_ResNet, DMTL, AdaShare, AMTL, AMTL_new
+from backbone import MTAN_ResNet, DMTL, AdaShare, SMTL, SMTL_new
 from create_dataset import office_dataloader
 import argparse
 torch.set_num_threads(3)
@@ -13,13 +13,13 @@ random.seed(688)
 np.random.seed(688)
 
 def parse_args():
-    parser = argparse.ArgumentParser(description= 'AMTL for Office-31 and Office-Home')
+    parser = argparse.ArgumentParser(description= 'SMTL for Office-31 and Office-Home')
     parser.add_argument('--dataset', default='office-31', type=str, help='office-31, office-home')
     parser.add_argument('--task_index', default=10, type=int, help='for STL: 0,1,2,3')
     parser.add_argument('--gpu_id', default='0', help='gpu_id') 
-    parser.add_argument('--model', default='DMTL', type=str, help='DMTL, MTAN, AdaShare, AMTL, AMTL_new')
+    parser.add_argument('--model', default='DMTL', type=str, help='DMTL, MTAN, AdaShare, SMTL, SMTL_new')
     parser.add_argument('--train_mode', default='trval', type=str, help='trval, train')
-    # for AMTL
+    # for SMTL
     parser.add_argument('--version', default='v1', type=str, help='v1 (a1+a2=1), v2 (0<=a<=1), v3 (gumbel softmax)')
     return parser.parse_args()
 
@@ -45,12 +45,12 @@ elif params.model == 'MTAN':
 elif params.model == 'AdaShare':
     batchsize = 32
     model = AdaShare(task_num=task_num, class_num=class_num).cuda()
-elif params.model == 'AMTL':
+elif params.model == 'SMTL':
     batchsize = 32
-    model = AMTL(task_num=task_num, class_num=class_num, version=params.version).cuda()
-elif params.model == 'AMTL_new':
+    model = SMTL(task_num=task_num, class_num=class_num, version=params.version).cuda()
+elif params.model == 'SMTL_new':
     batchsize = 32
-    model = AMTL_new(task_num=task_num, class_num=class_num, version=params.version).cuda()
+    model = SMTL_new(task_num=task_num, class_num=class_num, version=params.version).cuda()
 else:
     print("No correct model parameter!")
     exit()
@@ -110,15 +110,15 @@ for epoch in range(total_epoch):
         acc_avg = (right_num/count).mean(axis=-1)
         loss_data_avg = (loss_data_count/count).mean(axis=-1)
         
-        if params.model == 'AMTL' or params.model == 'AMTL_new':
+        if params.model == 'SMTL' or params.model == 'SMTL_new':
             alpha = model.get_adaptative_parameter()
             for i in range(task_num):
                 if params.version == 'v1':
-                    print(alpha[i], F.softmax(alpha[i], 0))   # AMTL-v1, alpha_1 + alpha_2 = 1
+                    print(alpha[i], F.softmax(alpha[i], 0))   # SMTL-v1, alpha_1 + alpha_2 = 1
                 elif params.version == 'v2':
-                    print(alpha[i], torch.exp(alpha[i]) / (1 + torch.exp(alpha[i])))  # AMTL-v2, 0 <= alpha <= 1
+                    print(alpha[i], torch.exp(alpha[i]) / (1 + torch.exp(alpha[i])))  # SMTL-v2, 0 <= alpha <= 1
                 elif params.version == 'v3':
-                    # below for AMTL-v3, gumbel softmax
+                    # below for SMTL-v3, gumbel softmax
                     temp = torch.sigmoid(alpha[i])
                     temp_alpha = torch.stack([1-temp, temp])
                     print(i, temp_alpha)

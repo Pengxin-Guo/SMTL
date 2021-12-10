@@ -13,7 +13,7 @@ random.seed(688)
 np.random.seed(688)
 
 def parse_args():
-    parser = argparse.ArgumentParser(description= 'AMTL for Office-31 and Office-Home')
+    parser = argparse.ArgumentParser(description= 'SMTL for Office-31 and Office-Home')
     parser.add_argument('--dataset', default='office-31', type=str, help='office-31, office-home')
     parser.add_argument('--task_index', default=10, type=int, help='for STL: 0,1,2,3')
     parser.add_argument('--gpu_id', default='0', help='gpu_id') 

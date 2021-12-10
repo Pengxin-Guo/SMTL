@@ -231,9 +231,9 @@ class AdaShare(nn.Module):
         return outputs
         
 
-class AMTL(nn.Module):
+class SMTL(nn.Module):
     def __init__(self, task_num, base_net='resnet50', hidden_dim=1024, class_num=31, version='v1'):
-        super(AMTL, self).__init__()
+        super(SMTL, self).__init__()
         # shared base network
         self.base_network_s = resnet.__dict__[base_net](pretrained=True)
         # task-specific base network
@@ -260,13 +260,13 @@ class AMTL(nn.Module):
         
         # adaptative parameters
         if self.version == 'v1' or self.version =='v2':
-            # AMTL-v1 and v2
+            # SMTL-v1 and v2
             self.alpha = nn.Parameter(torch.FloatTensor(task_num, 2))
             self.alpha.data.fill_(0.5)   # init 0.5(shared) 0.5(specific)
             # self.alpha.data[:,0].fill_(0)  # shared
             # self.alpha.data[:,1].fill_(1)  # specific
         elif self.version == 'v3':
-            # AMTL-v3, gumbel softmax
+            # SMTL-v3, gumbel softmax
             self.alpha = nn.Parameter(torch.FloatTensor(task_num))
             self.alpha.data.fill_(0)
         else:
@@ -283,11 +283,11 @@ class AMTL(nn.Module):
         hidden_features_t = self.hidden_layer_t[task_index](features_t)
         
         if self.version == 'v1':
-            temp_alpha = F.softmax(self.alpha[task_index], 0)     # AMTL-v1,  alpha_1 + alpha_2 = 1
+            temp_alpha = F.softmax(self.alpha[task_index], 0)     # SMTL-v1,  alpha_1 + alpha_2 = 1
         elif self.version == 'v2':
-            temp_alpha = torch.exp(self.alpha[task_index]) / (1 + torch.exp(self.alpha[task_index])) # AMTL-v2,  0 <= alpha <=1
+            temp_alpha = torch.exp(self.alpha[task_index]) / (1 + torch.exp(self.alpha[task_index])) # SMTL-v2,  0 <= alpha <=1
         elif self.version == 'v3':
-            # below for AMTL-v3, gumbel softmax
+            # below for SMTL-v3, gumbel softmax
             temp = torch.sigmoid(self.alpha[task_index])
             temp_alpha = torch.stack([1-temp, temp])
             temp_alpha = F.gumbel_softmax(torch.log(temp_alpha), tau=0.1, hard=True)
@@ -310,11 +310,11 @@ class AMTL(nn.Module):
         hidden_features_t = self.hidden_layer_t[task_index](features_t)
         
         if self.version == 'v1':
-            temp_alpha = F.softmax(self.alpha[task_index], 0)     # AMTL-v1,  alpha_1 + alpha_2 = 1
+            temp_alpha = F.softmax(self.alpha[task_index], 0)     # SMTL-v1,  alpha_1 + alpha_2 = 1
         elif self.version == 'v2':
-            temp_alpha = torch.exp(self.alpha[task_index]) / (1 + torch.exp(self.alpha[task_index])) # AMTL-v2,  0 <= alpha <=1
+            temp_alpha = torch.exp(self.alpha[task_index]) / (1 + torch.exp(self.alpha[task_index])) # SMTL-v2,  0 <= alpha <=1
         elif self.version == 'v3':
-            # below for AMTL-v3, gumbel softmax
+            # below for SMTL-v3, gumbel softmax
             temp = torch.sigmoid(self.alpha[task_index])
             if temp >= 0.5:
                 temp_alpha = [0, 1]
@@ -333,9 +333,9 @@ class AMTL(nn.Module):
         return self.alpha
         
 
-class AMTL_new(nn.Module):
+class SMTL_new(nn.Module):
     def __init__(self, task_num, base_net='resnet50', hidden_dim=1024, class_num=31, version='v1'):
-        super(AMTL_new, self).__init__()
+        super(SMTL_new, self).__init__()
         # shared base network
         self.base_network_s = resnet.__dict__[base_net](pretrained=True)
         # task-specific base network
@@ -365,13 +365,13 @@ class AMTL_new(nn.Module):
         
         # adaptative parameters
         if self.version == 'v1' or self.version =='v2':
-            # AMTL-v1 and v2
+            # SMTL-v1 and v2
             self.alpha = nn.Parameter(torch.FloatTensor(task_num, 2))
             self.alpha.data.fill_(0.5)   # init 0.5(shared) 0.5(specific)
             # self.alpha.data[:,0].fill_(0)  # shared
             # self.alpha.data[:,1].fill_(1)  # specific
         elif self.version == 'v3':
-            # AMTL-v3, gumbel softmax
+            # SMTL-v3, gumbel softmax
             self.alpha = nn.Parameter(torch.FloatTensor(task_num))
             self.alpha.data.fill_(0)
         else:
@@ -390,11 +390,11 @@ class AMTL_new(nn.Module):
         outputs_t = torch.mm(hidden_features_t, self.classifier_parameter_t[task_index])
         
         if self.version == 'v1':
-            temp_alpha = F.softmax(self.alpha[task_index], 0)     # AMTL-v1,  alpha_1 + alpha_2 = 1
+            temp_alpha = F.softmax(self.alpha[task_index], 0)     # SMTL-v1,  alpha_1 + alpha_2 = 1
         elif self.version == 'v2':
-            temp_alpha = torch.exp(self.alpha[task_index]) / (1 + torch.exp(self.alpha[task_index])) # AMTL-v2,  0 <= alpha <=1
+            temp_alpha = torch.exp(self.alpha[task_index]) / (1 + torch.exp(self.alpha[task_index])) # SMTL-v2,  0 <= alpha <=1
         elif self.version == 'v3':
-            # below for AMTL-v3, gumbel softmax
+            # below for SMTL-v3, gumbel softmax
             temp = torch.sigmoid(self.alpha[task_index])
             temp_alpha = torch.stack([1-temp, temp])
             temp_alpha = F.gumbel_softmax(torch.log(temp_alpha), tau=0.1, hard=True)
@@ -418,11 +418,11 @@ class AMTL_new(nn.Module):
         outputs_t = torch.mm(hidden_features_t, self.classifier_parameter_t[task_index])
         
         if self.version == 'v1':
-            temp_alpha = F.softmax(self.alpha[task_index], 0)     # AMTL-v1,  alpha_1 + alpha_2 = 1
+            temp_alpha = F.softmax(self.alpha[task_index], 0)     # SMTL-v1,  alpha_1 + alpha_2 = 1
         elif self.version == 'v2':
-            temp_alpha = torch.exp(self.alpha[task_index]) / (1 + torch.exp(self.alpha[task_index])) # AMTL-v2,  0 <= alpha <=1
+            temp_alpha = torch.exp(self.alpha[task_index]) / (1 + torch.exp(self.alpha[task_index])) # SMTL-v2,  0 <= alpha <=1
         elif self.version == 'v3':
-            # below for AMTL-v3, gumbel softmax
+            # below for SMTL-v3, gumbel softmax
             temp = torch.sigmoid(self.alpha[task_index])
             if temp >= 0.5:
                 temp_alpha = [0, 1]
