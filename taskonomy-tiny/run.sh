@@ -18,14 +18,14 @@ CUDA_VISIBLE_DEVICES=0,1,2,3 python -u -m torch.distributed.launch --nproc_per_n
 
 CUDA_VISIBLE_DEVICES=0,1,2,3 python -u -m torch.distributed.launch --nproc_per_node=4 train.py --model NDDRCNN > out/nddrcnn.out
 
-CUDA_VISIBLE_DEVICES=0,1,2,3 python -u -m torch.distributed.launch --nproc_per_node=4 train.py --model AMTL --version v1 > out/amtl_v1.out
+CUDA_VISIBLE_DEVICES=0,1,2,3 python -u -m torch.distributed.launch --nproc_per_node=4 train.py --model SMTL --version v1 > out/smtl_v1.out
 
-CUDA_VISIBLE_DEVICES=0,1,2,3 python -u -m torch.distributed.launch --nproc_per_node=4 train.py --model AMTL --version v2 > out/amtl_v2.out
+CUDA_VISIBLE_DEVICES=0,1,2,3 python -u -m torch.distributed.launch --nproc_per_node=4 train.py --model SMTL --version v2 > out/smtl_v2.out
 
-CUDA_VISIBLE_DEVICES=0,1,2,3 python -u -m torch.distributed.launch --nproc_per_node=4 train.py --model AMTL --version v3 > out/amtl_v3.out
+CUDA_VISIBLE_DEVICES=0,1,2,3 python -u -m torch.distributed.launch --nproc_per_node=4 train.py --model SMTL --version v3 > out/smtl_v3.out
 
-CUDA_VISIBLE_DEVICES=0,1,2,3 python -u -m torch.distributed.launch --nproc_per_node=4 train.py --model AMTL_new --version v1 > out/amtl_new_v1.out
+CUDA_VISIBLE_DEVICES=0,1,2,3 python -u -m torch.distributed.launch --nproc_per_node=4 train.py --model SMTL_new --version v1 > out/smtl_new_v1.out
 
-CUDA_VISIBLE_DEVICES=0,1,2,3 python -u -m torch.distributed.launch --nproc_per_node=4 train.py --model AMTL_new --version v2 > out/amtl_new_v2.out
+CUDA_VISIBLE_DEVICES=0,1,2,3 python -u -m torch.distributed.launch --nproc_per_node=4 train.py --model SMTL_new --version v2 > out/smtl_new_v2.out
 
-CUDA_VISIBLE_DEVICES=0,1,2,3 python -u -m torch.distributed.launch --nproc_per_node=4 train.py --model AMTL_new --version v3 > out/amtl_new_v3.out
+CUDA_VISIBLE_DEVICES=0,1,2,3 python -u -m torch.distributed.launch --nproc_per_node=4 train.py --model SMTL_new --version v3 > out/smtl_new_v3.out
