@@ -22,9 +22,11 @@ def parse_args():
     parser = argparse.ArgumentParser(description= 'SMTL for multilingual tasks')
     parser.add_argument('--dataset', default='udpos', type=str, help='xnli, pawsx, panx, udpos')
     parser.add_argument('--gpu_id', default='1', help='gpu_id') 
-    parser.add_argument('--model', default='DMTL', type=str, help='DMTL, STL')
+    parser.add_argument('--model', default='DMTL', type=str, help='DMTL, STL, SMTL, SMTL_new')
     parser.add_argument('--lang', default='all', type=str, help='all, en, zh, te, vi, de, es')
     parser.add_argument('--name', default='', type=str, help='name')
+    # for SMTL
+    parser.add_argument('--version', default='v1', type=str, help='v1 (a1+a2=1), v2 (0<=a<=1), v3 (gumbel softmax)')
     return parser.parse_args()
 
 params = parse_args()
@@ -71,25 +73,29 @@ elif params.dataset in ['panx', 'udpos']:
 else:
     raise('No support dataset!')
     
-
 if params.model == 'STL':
     lang_list = [params.lang]
     task_num = len(lang_list)
     model = STL(label_num=len(labels), task_num=task_num, task_type=task_type).cuda()
 elif params.model == 'DMTL':
     model = mBert(label_num=len(labels), task_num=task_num, task_type=task_type).cuda()
+elif params.model == 'SMTL':
+    model = SMTL_mBert(label_num=len(labels), task_num=task_num, task_type=task_type, version=params.version).cuda()
+elif params.model == 'SMTL_new':
+    model = SMTL_new_mBert(label_num=len(labels), task_num=task_num, task_type=task_type, version=params.version).cuda()
 else:
     print("No support model!")
     exit()
 
 
-logfolder = params.model + "_" + params.dataset + "_" + params.lang
+# logfolder = params.model + "_" + params.dataset + "_" + params.lang
+logfolder = "debug"
 logdir = os.path.join('./writer', logfolder)
 os.makedirs(logdir, exist_ok=True)
 writer = SummaryWriter(log_dir=logdir)
 print(logdir)
 
-total_epoch = 500
+total_epoch = 100
 train_batch = max(len(dataloader[lg]['train']) for lg in lang_list)
 t_total = train_batch*total_epoch
 
@@ -104,7 +110,8 @@ for epoch in range(total_epoch):
     print('--- Epoch {}'.format(epoch))
     s_t = time.time()
     model.train()
-    for batch_index in tqdm(range(train_batch)):
+    # for batch_index in tqdm(range(train_batch)):
+    for batch_index in range(train_batch):
 #         if batch_index > 2:
 #             break
         loss_train = torch.zeros(task_num).cuda()
@@ -126,6 +133,21 @@ for epoch in range(total_epoch):
                 results[epoch, mode_index+1, lg_index] = get_metric(root_data, model, params.dataset, mode, dataloader, iter_dataloader, lg=lg, lg_index=lg_index)
                 
     e_t = time.time()
+    if params.model == 'SMTL' or params.model == 'SMTL_new':
+        alpha = model.get_adaptative_parameter()
+        for i in range(task_num):
+            if params.version == 'v1':
+                print(alpha[i], F.softmax(alpha[i], 0))   # SMTL-v1, alpha_1 + alpha_2 = 1
+            elif params.version == 'v2':
+                print(alpha[i], torch.exp(alpha[i]) / (1 + torch.exp(alpha[i])))  # SMTL-v2, 0 <= alpha <= 1
+            elif params.version == 'v3':
+                # below for SMTL-v3, gumbel softmax
+                temp = torch.sigmoid(alpha[i])
+                temp_alpha = torch.stack([1-temp, temp])
+                print(i, temp_alpha)
+            else:
+                print("No correct version parameter!")
+                exit()
     print('Dev Acc/F1 {} avg {}'.format(results[epoch,1,:], results[epoch,1,:].mean()))
     print('Test Acc/F1 {} avg {}'.format(results[epoch,2,:], results[epoch,2,:].mean()))
     print('cost time {}'.format(e_t-s_t))

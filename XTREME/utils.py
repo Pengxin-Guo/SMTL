@@ -52,7 +52,7 @@ def get_metric(root_data, model, task, mode, all_dataloader, all_iter_dataloader
     if task in ['panx', 'udpos']:
         for batch_index in range(len(all_dataloader[lg][mode])):
             inputs = get_data(lg, mode, all_dataloader, all_iter_dataloader)
-            _, logits = model(inputs, lg_index)
+            _, logits = model.predict(inputs, lg_index)
             
             if batch_index == 0:
                 preds = logits.detach().cpu().numpy()
@@ -84,7 +84,7 @@ def get_metric(root_data, model, task, mode, all_dataloader, all_iter_dataloader
     elif task in ['xnli', 'pawsx']:
         for batch_index in range(len(all_dataloader[lg][mode])):
             inputs = get_data(lg, mode, all_dataloader, all_iter_dataloader)
-            _, logits = model(inputs, lg_index)
+            _, logits = model.predict(inputs, lg_index)
             
             if batch_index==0:
                 preds = logits.detach().cpu().numpy()
