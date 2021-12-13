@@ -95,14 +95,13 @@ class STL(BaseModel):
         add_pooling_layer = True if task_type == 'SC' else False
         
         # self.embedding = BertModel.from_pretrained('bert-base-multilingual-cased', add_pooling_layer=add_pooling_layer).embeddings
-        self.berts = nn.ModuleList([BertModel.from_pretrained('bert-base-multilingual-cased', 
-            add_pooling_layer=add_pooling_layer) for _ in range(self.task_num)])
+        self.berts = BertModel.from_pretrained('bert-base-multilingual-cased', add_pooling_layer=add_pooling_layer)
 
-        self.dropout = nn.ModuleList([nn.Dropout(p=0.1, inplace=False) for _ in range(self.task_num)])
-        self.fc = nn.ModuleList([nn.Linear(768, self.label_num) for _ in range(self.task_num)])
+        self.dropout = nn.Dropout(p=0.1, inplace=False)
+        self.fc = nn.Linear(768, self.label_num)
         
     def forward(self, data, task_index):
-        outputs = self.berts[task_index](input_ids=data['input_ids'],
+        outputs = self.berts(input_ids=data['input_ids'],
                            attention_mask=data['attention_mask'],
                            token_type_ids=data['token_type_ids'])
         rep = outputs[1] if self.task_type=='SC' else outputs[0]
@@ -112,14 +111,13 @@ class STL(BaseModel):
             self.rep_i[task_index].requires_grad = True
             rep = self.rep_i[task_index]
         if self.task_type == 'TC':
-            sequence_output = self.dropout[task_index](rep)
-            logits = self.fc[task_index](sequence_output)
+            sequence_output = self.dropout(rep)
+            logits = self.fc(sequence_output)
             loss = compute_loss(logits=logits, task_type='TC', data=data, label_num=self.label_num)
             return loss
-            
         elif self.task_type == 'SC':
-            pooled_output = self.dropout[task_index](rep)
-            logits = self.fc[task_index](pooled_output)
+            pooled_output = self.dropout(rep)
+            logits = self.fc(pooled_output)
             loss = compute_loss(logits=logits, task_type='SC', data=data, label_num=self.label_num)
             return loss
         else:
