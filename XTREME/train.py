@@ -88,8 +88,8 @@ else:
     exit()
 
 
-# logfolder = params.model + "_" + params.dataset + "_" + params.lang
-logfolder = "debug"
+logfolder = params.model + "_" + params.dataset + "_" + params.lang
+# logfolder = "debug"
 logdir = os.path.join('./writer', logfolder)
 os.makedirs(logdir, exist_ok=True)
 writer = SummaryWriter(log_dir=logdir)
