@@ -9,7 +9,7 @@ python train.py --gpu_id 0 --model STL --dataset udpos --lang vi  > out/stl_pos_
 
 python train.py --gpu_id 1 --model DMTL --dataset udpos > out/dmtl_pos_all.out
 
-python train.py --gpu_id 7 --model SMTL --version v1 --dataset udpos > out/smtl_v1_pos_all.out
+python train.py --gpu_id 2 --model SMTL --version v1 --dataset udpos > out/smtl_v1_pos_all.out
 
 # for PI task
 python train.py --gpu_id 3 --model STL --dataset pawsx --lang en  > out/stl_pawsx_en.out

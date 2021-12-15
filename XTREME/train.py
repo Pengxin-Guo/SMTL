@@ -49,7 +49,17 @@ max_seq_length = 128
 
 root_data = './data/'
 
-batch_size = 32
+if params.model == 'STL':
+    batch_size = 32
+elif params.model == 'DMTL':
+    batch_size = 32
+elif params.model == 'SMTL':
+    batch_size = 32
+elif params.model == 'SMTL_new':
+    batch_size = 32
+else:
+    raise('No support model!')
+
 if params.dataset in ['xnli', 'pawsx']:
     task_type = 'SC'
     data_dir = '{}/{}'.format(root_data, params.dataset)
