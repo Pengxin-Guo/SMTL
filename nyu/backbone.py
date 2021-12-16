@@ -881,9 +881,6 @@ class SMTLmodel_weight(nn.Module):
         else:
             transformed_grad = sum(loss_weight[tn]*per_loss_grads[tn] for tn in range(len(self.tasks)))
             self.rep.backward(transformed_grad)
-    
-    def get_share_params(self):
-        return self.backbone_s.parameters()
         
     def get_adaptative_parameter(self):
         return self.alpha

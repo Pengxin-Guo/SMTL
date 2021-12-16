@@ -158,8 +158,7 @@ class MTANDeepLabv3(nn.Module):
 
         # Define task-specific decoders using ASPP modules
         self.decoders = nn.ModuleList([DeepLabHead(512, self.num_out_channels[t]) for t in self.tasks])
-        
-        
+
     def forward(self, x, task_index=None):
         img_size  = x.size()[-2:]
         # Shared convolution
@@ -199,7 +198,6 @@ class MTANDeepLabv3(nn.Module):
         # Attention block 4 -> Apply attention over last residual block (without final encoder)
         a_4_mask = [att_i(torch.cat((u_4_b, a_3_i), dim=1)) for a_3_i, att_i in zip(a_3, self.encoder_att_4)]
         a_4 = [a_4_mask_i * u_4_t for a_4_mask_i in a_4_mask]
-        
         
         out = {}
         for i, t in enumerate(self.tasks):
@@ -444,9 +442,6 @@ class SMTLmodel(nn.Module):
         for i, t in enumerate(self.tasks):
             out[t] = F.interpolate(self.decoders[i](x_h[i]), img_size, mode='bilinear', align_corners=True)
         return out
-    
-    def get_share_params(self):
-        return self.backbone.parameters()
         
     def get_adaptative_parameter(self):
         return self.alpha
@@ -562,9 +557,6 @@ class SMTLmodel_new(nn.Module):
 
             out[t] = temp_alpha[0] * out_s[i] + temp_alpha[1] * out_t[i]
         return out
-    
-    def get_share_params(self):
-        return self.backbone.parameters()
         
     def get_adaptative_parameter(self):
         return self.alpha

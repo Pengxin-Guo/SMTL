@@ -39,9 +39,6 @@ class DeepLabv3(nn.Module):
     
     def predict(self, x):
         return self.forward(x)
-    
-    def get_share_params(self):
-        return self.backbone.parameters()
         
 
 class Cross_Stitch(nn.Module):
@@ -235,27 +232,6 @@ class MTANDeepLabv3(nn.Module):
         downsample = nn.Sequential(conv1x1(in_channel, 4 * out_channel, stride=1),
                                    nn.BatchNorm2d(4 * out_channel))
         return Bottleneck(in_channel, out_channel, downsample=downsample)
-    
-    def get_share_params(self):
-        p = []
-        p += self.shared_conv.parameters()
-        p += self.shared_layer1_b.parameters()
-        p += self.shared_layer2_b.parameters()
-        p += self.shared_layer3_b.parameters()
-        p += self.shared_layer4_b.parameters()
-        p += self.shared_layer1_t.parameters()
-        p += self.shared_layer2_t.parameters()
-        p += self.shared_layer3_t.parameters()
-        p += self.shared_layer4_t.parameters()
-        p += self.encoder_att_1.parameters()
-        p += self.encoder_att_2.parameters()
-        p += self.encoder_att_3.parameters()
-        p += self.encoder_att_4.parameters()
-        p += self.encoder_block_att_1.parameters()
-        p += self.encoder_block_att_2.parameters()
-        p += self.encoder_block_att_3.parameters()
-        p += self.down_sampling.parameters()
-        return p
     
     def predict(self, x):
         return self.forward(x)
@@ -502,9 +478,6 @@ class SMTLmodel(nn.Module):
             if t == 'normal':
                 out[i] = out[i] / torch.norm(out[i], p=2, dim=1, keepdim=True)
         return out
-    
-    def get_share_params(self):
-        return self.backbone.parameters()
         
     def get_adaptative_parameter(self):
         return self.alpha
@@ -632,9 +605,6 @@ class SMTLmodel_new(nn.Module):
                 out[i] = out[i] / torch.norm(out[i], p=2, dim=1, keepdim=True)
         
         return out
-    
-    def get_share_params(self):
-        return self.backbone.parameters()
         
     def get_adaptative_parameter(self):
         return self.alpha
