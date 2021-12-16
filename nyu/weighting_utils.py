@@ -11,7 +11,7 @@ def weight_update(weighting, loss_train, model, optimizer, epoch, batch_index, t
                   clip_grad=False, scheduler=None, mgda_gn='none', 
                   random_distribution=None, avg_cost=None, mean=None, std=None, init_loss=None):
     """
-    weighting: weight method (EW, GradNorm, UW, MGDA, DWA, GLS, PCGrad, GradDrop, IMTL, GradVac, random)
+    weighting: weight method (EW, UW, MGDA, DWA, GLS, PCGrad, GradVac, random)
     mgda_gn: using in MGDA (none, l2, loss, loss+)
     random_distribution: using in random (uniform, normal, random_normal, inter_random, dirichlet, dropout, dropout_k)
     avg_cost: using in DWA
@@ -21,16 +21,6 @@ def weight_update(weighting, loss_train, model, optimizer, epoch, batch_index, t
     optimizer.zero_grad()
     if (weighting == 'PCGrad') or (weighting == 'GradVac'):
         optimizer.pc_backward(loss_train)
-    elif weighting == 'MGDA_approx':
-        batch_weight = model.MGDA_approx_backward(loss_train, mgda_gn=mgda_gn)
-    elif weighting == 'GradNorm':
-        model.GradNorm_backward(loss_train, init_loss)
-        if (batch_index+1) % 50 == 0:
-            print('{} weight: {}'.format(weighting, model.loss_scale))
-    elif weighting == 'IMTL':
-        batch_weight = model.IMTL_backward(loss_train)
-    elif weighting == 'GradDrop':
-        model.GradDrop_backward(loss_train)
     elif weighting == 'UW':
         loss = sum(1/(2*torch.exp(model.loss_scale[i]))*loss_train[i]+model.loss_scale[i]/2 for i in range(task_num))
         loss.backward()

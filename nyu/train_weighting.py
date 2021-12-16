@@ -29,7 +29,7 @@ def parse_args():
     parser.add_argument('--random_distribution', default='normal', type=str, 
                         help='normal, random_normal, uniform, inter_random, dirichlet, dropout, dropout_1, dropout_2')
     parser.add_argument('--weighting', default='EW', type=str, 
-                        help='EW, UW, DWA, MGDA, MGDA_approx, GardNorm, PCGrad, random, GradVac, GLS, IMTL, GradDrop')
+                        help='EW, UW, DWA, MGDA, PCGrad, random, GradVac, GLS')
     # for SMTL
     parser.add_argument('--version', default='v1', type=str, help='v1 (a1+a2=1), v2 (0<=a<=1), v3 (gumbel softmax)')
     return parser.parse_args()
@@ -115,12 +115,6 @@ for epoch in range(total_epoch):
         loss_train = torch.zeros(3).cuda()
         for i in range(3):
             loss_train[i] = train_loss[i]
-            
-        if params.weighting == 'GradNorm' and epoch == 0:
-            if batch_index == 0:
-                init_loss = np.array([loss_train[tn].item() for tn in range(task_num)])
-            else:
-                init_loss = (init_loss+np.array([loss_train[tn].item() for tn in range(task_num)]))/(batch_index+1)
             
         batch_weight = weight_update(params.weighting, loss_train, model, optimizer, epoch, 
                                      batch_index, task_num, clip_grad=False, scheduler=None, 

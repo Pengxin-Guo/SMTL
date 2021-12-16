@@ -635,22 +635,14 @@ class SMTLmodel_weight(nn.Module):
             raise('No support {} dataset'.format(dataset))
         
         # for different weighting
-        rep_detach = True if weighting in ['GradDrop', 'IMTL', 'MGDA_approx', 'GradNorm'] else False
-        if weighting == 'IMTL':
-            loss_weight_init = 0.0
-        elif weighting == 'UW':
+        if weighting == 'UW':
             loss_weight_init = -0.5
         elif weighting == 'WGLS':
-            loss_weight_init = 1.0
-        elif weighting == 'GradNorm':
             loss_weight_init = 1.0
         else:
             loss_weight_init = None
         m_weighting = 'GMM' if weighting == 'GMM' else None
         
-        if rep_detach:
-            self.rep = [0] * len(self.tasks)
-            self.rep_i = [0] * len(self.tasks)
         if isinstance(loss_weight_init, float):
            self.loss_scale = nn.Parameter(torch.FloatTensor([loss_weight_init] * len(self.tasks)))
         if weighting == 'GMM':
@@ -753,134 +745,5 @@ class SMTLmodel_weight(nn.Module):
                 out[i] = out[i] / torch.norm(out[i], p=2, dim=1, keepdim=True)
         return out
     
-    def GradDrop_backward(self, losses, leak=0.0):
-        epsilon = 1e-7
-        if isinstance(self.rep, list):
-            batch_size = self.rep[0].size()[0]
-            rep_size = self.rep[0].size()
-            inputs = torch.stack(self.rep).reshape(len(self.tasks), batch_size, -1)
-        else:
-            batch_size = self.rep.size()[0]
-            rep_size = self.rep.size()
-            inputs = self.rep.reshape(batch_size, -1).unsqueeze(0).repeat(len(self.tasks), 1, 1)
-        per_loss_grads = torch.zeros(len(self.tasks), *rep_size).cuda()
-        for tn, loss in enumerate(losses):
-            loss.backward(retain_graph=True)
-            per_loss_grads[tn] = self.rep_i[tn].grad.data.clone()
-        grads = per_loss_grads.reshape(len(self.tasks), batch_size, -1)
-        inputs_abs = torch.abs((torch.abs(inputs)<=epsilon).float()+inputs)
-        grads = grads*(inputs/inputs_abs)
-        grads = grads.sum(1)
-
-        grad_sign_positive = (grads>0.0).float()
-        grad_sign_negative = (grads<0.0).float()
-
-        prob_pos = grads.sum(0)/(2*grads.abs().sum(0)+epsilon)+0.5
-        prob_pos = (prob_pos>=torch.rand(prob_pos.shape).cuda()).float()-0.5
-
-        grad_masks = (((grad_sign_positive-grad_sign_negative)*prob_pos)>=0).float()
-        grad_masks = grad_masks.unsqueeze(1).repeat(1, batch_size, 1).reshape(*per_loss_grads.size())
-        
-        transformed_per_loss_grads = per_loss_grads*(leak+(1-leak)*grad_masks)
-        
-        if isinstance(self.rep, list):
-            for tn in range(len(self.tasks)):
-                self.rep[tn].backward(transformed_per_loss_grads[tn], retain_graph=True)
-        else:
-            self.rep.backward(transformed_per_loss_grads.sum(0))
-    
-        # transformed_grad_norm = (transformed_grad**2).sum().sqrt()
-        # original_grad_norm = (grad_output**2).sum().sqrt()
-
-        # grad_input = transformed_grad*original_grad_norm/(transformed_grad_norm+epsilon)
-#         self.rep.backward(transformed_grad)
-        
-        self.rep_i = [0]*len(self.tasks)
-    
-    def IMTL_backward(self, losses):
-        if isinstance(self.rep, list):
-            batch_size = self.rep[0].size()[0]
-            rep_size = self.rep[0].size()
-        else:
-            batch_size = self.rep.size()[0]
-            rep_size = self.rep.size()
-        per_loss_grads = torch.zeros(len(self.tasks), *rep_size).cuda()
-        for tn, loss in enumerate(losses):
-            loss = torch.exp(self.loss_scale[tn])*loss - self.loss_scale[tn]
-            loss.backward(retain_graph=True)
-            per_loss_grads[tn] = self.rep_i[tn].grad.data.clone()
-        grads = per_loss_grads.reshape(len(self.tasks), batch_size, -1).sum(1)
-        grads_unit = grads/(torch.norm(grads, p=2, dim=-1, keepdim=True)+1e-8)
-
-        D = grads[0:1].repeat(len(self.tasks)-1, 1) - grads[1:]
-        U = grads_unit[0:1].repeat(len(self.tasks)-1, 1) - grads_unit[1:]
-
-        alpha = torch.matmul(torch.matmul(grads[0], U.t()), torch.linalg.inv(torch.matmul(D, U.t())))
-        alpha = torch.cat((1-alpha.sum().unsqueeze(0), alpha), dim=0)
-        
-        if isinstance(self.rep, list):
-            for tn in range(len(self.tasks)):
-                self.rep[tn].backward(alpha[tn]*per_loss_grads[tn], retain_graph=True)
-        else:
-            transformed_grad = sum(alpha[tn]*per_loss_grads[tn] for tn in range(len(self.tasks)))
-            self.rep.backward(transformed_grad)
-        self.rep_i = [0]*len(self.tasks)
-        return alpha
-
-    def MGDA_approx_backward(self, losses, mgda_gn='none'):
-        if isinstance(self.rep, list):
-            batch_size = self.rep[0].size()[0]
-            rep_size = self.rep[0].size()
-        else:
-            batch_size = self.rep.size()[0]
-            rep_size = self.rep.size()
-        per_loss_grads = torch.zeros(len(self.tasks), *rep_size).cuda()
-        for tn, loss in enumerate(losses):
-            loss.backward(retain_graph=True)
-            per_loss_grads[tn] = self.rep_i[tn].grad.data.clone()
-
-        grads = {tn:per_loss_grads[tn] for tn in range(len(self.tasks))}
-        loss_data = {tn:losses[tn].item() for tn in range(len(self.tasks))}
-        gn = gradient_normalizers(grads, loss_data, normalization_type=mgda_gn)
-        for tn in range(len(self.tasks)):
-            grads[tn] = grads[tn] / gn[tn]
-        sol, _ = MinNormSolver.find_min_norm_element([grads[tn] for tn in range(len(self.tasks))])
-        if isinstance(self.rep, list):
-            for tn in range(len(self.tasks)):
-                self.rep[tn].backward(float(sol[tn])*per_loss_grads[tn], retain_graph=True)
-        else:
-            transformed_grad = sum(float(sol[tn])*per_loss_grads[tn] for tn in range(len(self.tasks)))
-            self.rep.backward(transformed_grad)
-        self.rep_i = [0]*len(self.tasks)
-        return torch.Tensor(sol).cuda()
-    
-    def GradNorm_backward(self, losses, L_0, alpha=1.5):
-        loss_scale = len(self.tasks)/self.loss_scale.sum()*self.loss_scale
-        if isinstance(self.rep, list):
-            batch_size = self.rep[0].size()[0]
-            rep_size = self.rep[0].size()
-        else:
-            batch_size = self.rep.size()[0]
-            rep_size = self.rep.size()
-        per_loss_grads = torch.zeros(len(self.tasks), *rep_size).cuda()
-        for tn, loss in enumerate(losses):
-            loss.backward(retain_graph=True)
-            per_loss_grads[tn] = self.rep_i[tn].grad.data.clone()
-        grads = per_loss_grads.reshape(len(self.tasks), batch_size, -1).sum(1).detach()
-        G_per_loss = torch.norm(loss_scale.unsqueeze(1)*grads, p=2, dim=-1)
-        G = G_per_loss.mean(0)
-        L_i = torch.Tensor([losses[tn].item()/L_0[tn] for tn in range(len(self.tasks))])
-        r_i = L_i/L_i.mean()
-        constant_term = (G*(r_i[tn]**alpha)).detach()
-        L_grad = sum([torch.abs(G_per_loss[tn]-constant_term) for tn in range(len(self.tasks))])
-        L_grad.backward()
-        loss_weight = loss_scale.detach().clone()
-        if isinstance(self.rep, list):
-            for tn in range(len(self.tasks)):
-                self.rep[tn].backward(loss_weight[tn]*per_loss_grads[tn], retain_graph=True)
-        else:
-            transformed_grad = sum(loss_weight[tn]*per_loss_grads[tn] for tn in range(len(self.tasks)))
-            self.rep.backward(transformed_grad)
-        
     def get_adaptative_parameter(self):
         return self.alpha
