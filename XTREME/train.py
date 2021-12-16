@@ -54,9 +54,9 @@ if params.model == 'STL':
 elif params.model == 'DMTL':
     batch_size = 32
 elif params.model == 'SMTL':
-    batch_size = 32
+    batch_size = 16
 elif params.model == 'SMTL_new':
-    batch_size = 32
+    batch_size = 12
 else:
     raise('No support model!')
 
@@ -98,12 +98,14 @@ else:
     exit()
 
 
+'''
 logfolder = params.model + "_" + params.dataset + "_" + params.lang
 # logfolder = "debug"
 logdir = os.path.join('./writer', logfolder)
 os.makedirs(logdir, exist_ok=True)
 writer = SummaryWriter(log_dir=logdir)
 print(logdir)
+'''
 
 total_epoch = 100
 train_batch = max(len(dataloader[lg]['train']) for lg in lang_list)
@@ -166,10 +168,12 @@ for epoch in range(total_epoch):
         best_dev_acc = results[epoch,1,:].mean()
         best_dev_epoch = epoch
     print('Best Dev Epoch {}'.format(best_dev_epoch))
-
+    
+    '''
     writer.add_scalar('val/acc_avg', results[epoch,1,:].mean(), epoch)
     writer.add_scalar('test/acc_avg', results[epoch,2,:].mean(), epoch)
 
     for tn in range(task_num):
         writer.add_scalar('val/{}acc'.format(tn), results[epoch,2,tn], epoch)
         writer.add_scalar('test/{}acc'.format(tn), results[epoch,2,tn], epoch)
+    '''
