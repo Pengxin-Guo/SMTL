@@ -8,20 +8,17 @@ random.seed(0)
 np.random.seed(0)
 
 def weight_update(weighting, loss_train, model, optimizer, epoch, batch_index, task_num,
-                  clip_grad=False, scheduler=None, mgda_gn='none', 
+                  clip_grad=False, scheduler=None,
                   random_distribution=None, avg_cost=None, mean=None, std=None, init_loss=None):
     """
-    weighting: weight method (EW, UW, MGDA, DWA, GLS, PCGrad, GradVac, random)
-    mgda_gn: using in MGDA (none, l2, loss, loss+)
+    weighting: weight method (EW, UW, DWA, GLS, random)
     random_distribution: using in random (uniform, normal, random_normal, inter_random, dirichlet, dropout, dropout_k)
     avg_cost: using in DWA
     mean, std: using in random_normal
     """
     batch_weight = None
     optimizer.zero_grad()
-    if (weighting == 'PCGrad') or (weighting == 'GradVac'):
-        optimizer.pc_backward(loss_train)
-    elif weighting == 'UW':
+    if weighting == 'UW':
         loss = sum(1/(2*torch.exp(model.loss_scale[i]))*loss_train[i]+model.loss_scale[i]/2 for i in range(task_num))
         loss.backward()
         if (batch_index+1) % 200 == 0:
@@ -52,18 +49,6 @@ def weight_update(weighting, loss_train, model, optimizer, epoch, batch_index, t
     else:
         if weighting == 'EW':
             batch_weight = torch.ones(task_num).cuda()
-        elif weighting == 'MGDA':
-            grads = {}
-            loss_data = {}
-            for i in range(task_num):
-                grads[i] = list(torch.autograd.grad(loss_train[i], model.get_share_params(), retain_graph=True))
-                loss_data[i] = loss_train[i].item()
-            gn = gradient_normalizers(grads, loss_data, normalization_type=mgda_gn) # l2, loss, loss+, none
-            for i in range(task_num):
-                for g_i in range(len(grads[i])):
-                    grads[i][g_i] = grads[i][g_i] / gn[i]
-            sol, _ = MinNormSolver.find_min_norm_element([grads[i] for i in range(task_num)])
-            batch_weight = torch.Tensor(sol).cuda()
         elif weighting == 'DWA' and avg_cost is not None:
             T = 2
             if epoch > 1:
@@ -117,7 +102,7 @@ def weight_update(weighting, loss_train, model, optimizer, epoch, batch_index, t
     if clip_grad:
         torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
     optimizer.step()
-    if scheduler is not None and weighting != 'PCGrad' and weighting != 'GradVac':
+    if scheduler is not None:
         scheduler.step()
     if weighting != 'EW' and batch_weight is not None and (batch_index+1) % 20 == 0:
         print('{} weight: {}'.format(weighting, batch_weight.cpu().numpy()))

@@ -11,8 +11,6 @@ from create_dataset import NYUv2
 
 from weighting_utils import weight_update
 from min_norm_solvers import MinNormSolver, gradient_normalizers
-from pcgrad import PCGrad
-from gradvac import GradVac
 
 import argparse
 
@@ -25,11 +23,10 @@ def parse_args():
     parser.add_argument('--gpu_id', default='0', help='gpu_id') 
     parser.add_argument('--aug', action='store_true', default=False, help='data augmentation')
     parser.add_argument('--train_mode', default='trainval', type=str, help='trainval, train')
-    parser.add_argument('--mgda_gn', default='none', type=str, help='l2, none, loss, loss+')
     parser.add_argument('--random_distribution', default='normal', type=str, 
                         help='normal, random_normal, uniform, inter_random, dirichlet, dropout, dropout_1, dropout_2')
     parser.add_argument('--weighting', default='EW', type=str, 
-                        help='EW, UW, DWA, MGDA, PCGrad, random, GradVac, GLS')
+                        help='EW, UW, DWA, random, GLS')
     # for SMTL
     parser.add_argument('--version', default='v1', type=str, help='v1 (a1+a2=1), v2 (0<=a<=1), v3 (gumbel softmax)')
     return parser.parse_args()
@@ -75,13 +72,9 @@ model = SMTLmodel_weight(version=params.version, weighting=params.weighting).cud
 task_num = len(model.tasks)
 scheduler = None
 init_loss = None
-if params.weighting == 'PCGrad':
-    optimizer = PCGrad(optim.Adam(model.parameters(), lr=1e-4, weight_decay=1e-5))
-elif params.weighting == 'GradVac':
-    optimizer = GradVac(optim.Adam(model.parameters(), lr=1e-4, weight_decay=1e-5))
-else:
-    optimizer = optim.Adam(model.parameters(), lr=1e-4, weight_decay=1e-5)
-    scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=100, gamma=0.5)
+
+optimizer = optim.Adam(model.parameters(), lr=1e-4, weight_decay=1e-5)
+scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=100, gamma=0.5)
 
 mean, std = None, None
 if params.random_distribution == 'random_normal':
@@ -118,7 +111,7 @@ for epoch in range(total_epoch):
             
         batch_weight = weight_update(params.weighting, loss_train, model, optimizer, epoch, 
                                      batch_index, task_num, clip_grad=False, scheduler=None, 
-                                     mgda_gn=params.mgda_gn, random_distribution=params.random_distribution, 
+                                     random_distribution=params.random_distribution, 
                                      avg_cost=avg_cost[:,0:7:3], mean=mean, std=std, init_loss=init_loss)
         if batch_weight is not None:
             lambda_weight[:, epoch, batch_index] = batch_weight
@@ -164,8 +157,7 @@ for epoch in range(total_epoch):
         # compute mIoU and acc
         avg_cost[epoch, 13], avg_cost[epoch, 14] = conf_mat.get_metrics()
     
-    if (params.weighting != 'PCGrad') and (params.weighting != 'GradVac'):
-        scheduler.step()
+    scheduler.step()
     e_t = time.time()
     print('Epoch: {:04d} | TRAIN: {:.4f} {:.4f} {:.4f} | {:.4f} {:.4f} {:.4f} | {:.4f} {:.4f} {:.4f} {:.4f} {:.4f} {:.4f} ||'
         'TEST: {:.4f} {:.4f} {:.4f} | {:.4f} {:.4f} {:.4f} | {:.4f} {:.4f} {:.4f} {:.4f} {:.4f} {:.4f} || {:.4f}'
