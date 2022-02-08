@@ -14,9 +14,11 @@ from utils import get_data, get_metric
 from torch.utils.tensorboard import SummaryWriter
 from utils import weight_update
 
+'''
 torch.manual_seed(0)
 random.seed(0)
 np.random.seed(0)
+'''
 
 def parse_args():
     parser = argparse.ArgumentParser(description= 'SMTL for multilingual tasks')
@@ -56,7 +58,7 @@ elif params.model == 'DMTL':
 elif params.model == 'SMTL':
     batch_size = 16
 elif params.model == 'SMTL_new':
-    batch_size = 12
+    batch_size = 16
 else:
     raise('No support model!')
 
@@ -107,7 +109,7 @@ writer = SummaryWriter(log_dir=logdir)
 print(logdir)
 '''
 
-total_epoch = 100
+total_epoch = 300
 train_batch = max(len(dataloader[lg]['train']) for lg in lang_list)
 t_total = train_batch*total_epoch
 
