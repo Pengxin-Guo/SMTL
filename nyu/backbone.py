@@ -641,7 +641,6 @@ class SMTLmodel_weight(nn.Module):
             loss_weight_init = 1.0
         else:
             loss_weight_init = None
-        m_weighting = 'GMM' if weighting == 'GMM' else None
         
         if isinstance(loss_weight_init, float):
            self.loss_scale = nn.Parameter(torch.FloatTensor([loss_weight_init] * len(self.tasks)))

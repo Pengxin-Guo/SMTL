@@ -94,8 +94,8 @@ for epoch in range(total_epoch):
     train_dataset = iter(nyuv2_train_loader)
     conf_mat = ConfMatrix(model.class_nb)
     for batch_index in range(train_batch):
-        if batch_index > 1:
-            break
+#         if batch_index > 1:
+#             break
         train_data, train_label, train_depth, train_normal = train_dataset.next()
         train_data, train_label = train_data.cuda(non_blocking=True), train_label.long().cuda(non_blocking=True)
         train_depth, train_normal = train_depth.cuda(non_blocking=True), train_normal.cuda(non_blocking=True)
