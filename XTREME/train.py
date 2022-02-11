@@ -49,7 +49,7 @@ model_type = 'bert'
 mode_list = ['train', 'dev', 'test']
 max_seq_length = 128
 
-root_data = './data/'
+root_data = '/data/dataset/XTREME/'
 
 if params.model == 'STL':
     batch_size = 32
