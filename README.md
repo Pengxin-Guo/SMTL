@@ -18,3 +18,20 @@ You can run "nyu/run.sh" to train and evaluate on the NYUv2 dataset.
 You can run "pascal/run.sh" to train and evaluate on the PASCAL-Context dataset. 
 
 You can run "taskonomy/run.sh" to train and evaluate on the Taskonomy dataset. 
+
+## Citation
+
+If you use this code for your research, please consider citing:
+
+```
+@article{guo2021safe,
+  title={Safe Multi-Task Learning},
+  author={Guo, Pengxin and Ye, Feiyang and Zhang, Yu},
+  journal={arXiv preprint arXiv:2111.10601},
+  year={2021}
+}
+```
+
+## Contact
+
+If you have any problem about our code, feel free to contact [12032913@mail.sustech.edu.cn](mailto:12032913@mail.sustech.edu.cn).
